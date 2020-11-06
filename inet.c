@@ -1,12 +1,14 @@
 /*
  * Internet address helpers
  *
- * Copyright (c) 2017 Alexei A. Smekalkine <ikle@ikle.ru>
+ * Copyright (c) 2017-2020 Alexei A. Smekalkine <ikle@ikle.ru>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
 #include <stdio.h>
+#include <string.h>
+
 #include <arpa/inet.h>
 #include <netdb.h>
 
@@ -77,11 +79,15 @@ int get_ipv6_range (const char *from, struct ipv6_range *to)
 
 int get_service (const char *from, unsigned *to)
 {
-	struct addrinfo *res, *p;
+	struct addrinfo hints, *res, *p;
 	struct sockaddr_in  *s4;
 	struct sockaddr_in6 *s6;
 
-	if (getaddrinfo (NULL, from, NULL, &res) != 0)
+	memset (&hints, 0, sizeof (hints));
+
+	hints.ai_flags = AI_V4MAPPED;
+
+	if (getaddrinfo (NULL, from, &hints, &res) != 0)
 		return 0;
 
 	for (p = res; p != NULL; p = p->ai_next) {
