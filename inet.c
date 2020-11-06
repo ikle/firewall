@@ -67,6 +67,27 @@ int get_ipv4_range (const char *from, struct ipv4_range *to)
 	       ntohl (to->start.s_addr) <= ntohl (to->stop.s_addr);
 }
 
+static int ipv6_le (const struct in6_addr *a, const struct in6_addr *b)
+{
+	uint32_t l = ntohl (a->s6_addr32[0]), r = ntohl (b->s6_addr32[0]);
+
+	if (l != r)
+		return l < r;
+
+	l = ntohl (a->s6_addr32[1]), r = ntohl (b->s6_addr32[1]);
+
+	if (l != r)
+		return l < r;
+
+	l = ntohl (a->s6_addr32[2]), r = ntohl (b->s6_addr32[2]);
+
+	if (l != r)
+		return l < r;
+
+	l = ntohl (a->s6_addr32[3]), r = ntohl (b->s6_addr32[3]);
+	return l <= r;
+}
+
 int get_ipv6_range (const char *from, struct ipv6_range *to)
 {
 	char start[IPV6_LEN], stop[IPV6_LEN], tail;
@@ -75,7 +96,8 @@ int get_ipv6_range (const char *from, struct ipv6_range *to)
 		    start, stop, &tail) != 2)
 		return 0;
 
-	return get_ipv6 (start, &to->start) && get_ipv6 (stop, &to->stop);
+	return get_ipv6 (start, &to->start) && get_ipv6 (stop, &to->stop) &&
+	       ipv6_le (&to->start, &to->stop);
 }
 
 int get_service (const char *from, unsigned *to)
