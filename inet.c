@@ -116,5 +116,5 @@ int get_port_range (const char *from, struct ip_port_range *to)
 	if (sscanf (from, "%hu-%hu%c", &to->start, &to->stop, &tail) != 2)
 		return 0;
 
-	return 1;
+	return to->start <= to->stop;
 }
