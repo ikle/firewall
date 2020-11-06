@@ -85,8 +85,6 @@ int get_service (const char *from, unsigned *to)
 
 	memset (&hints, 0, sizeof (hints));
 
-	hints.ai_flags = AI_V4MAPPED;
-
 	if (getaddrinfo (NULL, from, &hints, &res) != 0)
 		return 0;
 
