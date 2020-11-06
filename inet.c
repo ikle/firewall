@@ -63,7 +63,8 @@ int get_ipv4_range (const char *from, struct ipv4_range *to)
 		    start, stop, &tail) != 2)
 		return 0;
 
-	return get_ipv4 (start, &to->start) && get_ipv4 (stop, &to->stop);
+	return get_ipv4 (start, &to->start) && get_ipv4 (stop, &to->stop) &&
+	       ntohl (to->start.s_addr) <= ntohl (to->stop.s_addr);
 }
 
 int get_ipv6_range (const char *from, struct ipv6_range *to)
