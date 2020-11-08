@@ -17,6 +17,13 @@
 
 #include "conf.h"
 
+static const char *path_root (void)
+{
+	const char *root = getenv ("VYATTA_TEMP_CONFIG_DIR");
+
+	return root == NULL ? "/var/run/config/active" : root;
+}
+
 struct conf {
 	char *root;
 	DIR *dir;
@@ -59,10 +66,7 @@ struct conf *conf_alloc (const char *root)
 	if ((o = malloc (sizeof (*o))) == NULL)
 		return NULL;
 
-	if (root == NULL)
-		root = getenv ("VYATTA_TEMP_CONFIG_DIR");
-
-	o->root = strdup (root == NULL ? "/var/run/config/active" : root);
+	o->root = strdup (root == NULL ? path_root () : root);
 
 	if (o->root == NULL || !conf_init (o))
 		goto error;
