@@ -11,63 +11,13 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <libiptc/libiptc.h>
-
-struct ipt_rule {
-	struct ipt_entry e;
-	struct xt_standard_target t;
-};
-
-static int ipt_rule_init (struct ipt_rule *o)
-{
-	memset (o, 0, sizeof (*o));
-
-	o->e.target_offset = offsetof (struct ipt_rule, t);
-	o->e.next_offset = sizeof (*o);
-
-	o->t.target.u.user.target_size = sizeof (o->t);  // XT_ALIGN?
-	return 1;
-}
-
-static int ipt_rule_jump (struct ipt_rule *o, const char *target)
-{
-	if (strlen (target) >= sizeof (o->t.target.u.user.name)) {
-		errno = EINVAL;
-		return 0;
-	}
-
-	strcpy (o->t.target.u.user.name, target);
-	return 1;
-}
-
-static int ipt_rule_goto (struct ipt_rule *o, const char *target)
-{
-	o->e.ip.flags |= IPT_F_GOTO;
-
-	return ipt_rule_jump (o, target);
-}
-
-static int ipt_rule_in (struct ipt_rule *o, const char *iface)
-{
-	size_t i;
-	int plus = 0;
-
-	for (i = 0; *iface != '\0'; ++i, ++iface) {
-		o->e.ip.iniface[i] = *iface;
-		o->e.ip.iniface_mask[i] = 1;
-		plus = *iface == '+';
-	}
-
-	if (plus)
-		o->e.ip.iniface_mask[i - 1] = '\0';
-
-	return 1;
-}
+#include "ipt.h"
 
 static int test (struct xtc_handle *o, const char *chain)
 {
 	const char *policy = "policy-0";
-	struct ipt_rule r;
+	struct ipt_rule *r;
+	int ok;
 
 	if (!iptc_is_chain (policy, o) && !iptc_create_chain (policy, o))
 		return 0;
@@ -78,14 +28,16 @@ static int test (struct xtc_handle *o, const char *chain)
 	if (!iptc_flush_entries (chain, o))
 		return 0;
 
-	ipt_rule_init (&r);
-	ipt_rule_in   (&r, "eth2");
-	ipt_rule_goto (&r, policy);
-
-	if (!iptc_append_entry (chain, &r.e, o))
+	if ((r = ipt_rule_alloc ()) == NULL)
 		return 0;
 
-	return iptc_commit (o);
+	ipt_rule_set_in   (r, "eth2");
+	ipt_rule_set_goto (r, policy);
+
+	ok = iptc_append_rule (chain, r, o);
+	ipt_rule_free (r);
+
+	return ok && iptc_commit (o);
 }
 
 int main (int argc, char *argv[])
