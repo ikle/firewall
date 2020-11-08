@@ -27,20 +27,6 @@ def append_default (chain, zone):
 	iptc_append_entry (chain, "-j " + uc (default))
 ```
 
-## Reset to clean state
-
-```python
-def reset ():
-	iptc_flush_entries (local_in)
-	iptc_flush_entries (forward)
-	iptc_flush_entries (local_out)
-
-	for chain in iptc_get_chains ():
-		if chain.startswith ("ZONE-"):
-			iptc_flush_entries (chain)
-			iptc_delete_chain  (chain)
-```
-
 ## Create zone input chains
 
 ```python
@@ -97,9 +83,17 @@ def connect_local_out (zone):
 ## Top-level logic
 
 ```python
-def update_zones ():
-	reset ()
+def zone_fini ():
+	iptc_flush_entries (local_in)
+	iptc_flush_entries (forward)
+	iptc_flush_entries (local_out)
 
+	for chain in iptc_get_chains ():
+		if chain.startswith ("ZONE-"):
+			iptc_flush_entries (chain)
+			iptc_delete_chain  (chain)
+
+def zone_init ():
 	for zone in conf (root):
 		create_zone_chain (zone)
 
@@ -111,5 +105,9 @@ def update_zones ():
 			connect_transit (zone)
 
 	iptc_commit ()
+
+def zone_update ():
+	zone_fini ()
+	zone_init ()
 ```
 
