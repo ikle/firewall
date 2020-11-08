@@ -24,6 +24,30 @@ static const char *path_root (void)
 	return root == NULL ? "/var/run/config/active" : root;
 }
 
+static char *path_push_one (const char *path, const char *name)
+{
+	char *e, *p;
+
+	e = g_uri_escape_string (name, NULL, TRUE);
+	p = g_build_filename (path, e, NULL);
+	free (e);
+	return p;
+}
+
+static char *path_pushv (const char *path, va_list ap)
+{
+	char *p = g_build_filename (path, NULL), *q;
+	const char *name;
+
+	while ((name = va_arg (ap, const char *)) != NULL) {
+		q = path_push_one (p, name);
+		free (p);
+		p = q;
+	}
+
+	return p;
+}
+
 struct conf {
 	char *root;
 	DIR *dir;
@@ -88,44 +112,19 @@ void conf_free (struct conf *o)
 	free (o);
 }
 
-static int conf_push_one (struct conf *o, const char *name)
-{
-	char *name_e;
-	struct conf c;
-
-	if ((name_e = g_uri_escape_string (name, NULL, TRUE)) == NULL)
-		return 0;
-
-	c.root = g_build_filename (o->root, name_e, NULL);
-	free (name_e);
-
-	if (!conf_init (&c))
-		goto error;
-
-	conf_fini (o);
-	free (o->root);
-	*o = c;
-	return 1;
-error:
-	free (c.root);
-	return 0;
-}
-
 struct conf *conf_clonev (struct conf *o, va_list ap)
 {
+	const char *root = o == NULL ? path_root () : o->root;
+	char *path = path_pushv (root, ap);
 	struct conf *c;
-	const char *name;
 
-	if ((c = conf_alloc (o == NULL ? NULL : o->root)) == NULL)
-		return NULL;
+	if ((c = conf_alloc (path)) == NULL)
+		goto error;
 
-	while ((name = va_arg (ap, const char *)) != NULL)
-		if (!conf_push_one (c, name))
-			goto error;
-
+	free (path);
 	return c;
 error:
-	conf_free (c);
+	free (path);
 	return NULL;
 }
 
