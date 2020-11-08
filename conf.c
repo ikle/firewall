@@ -1,7 +1,7 @@
 /*
  * Configuration Interface
  *
- * Copyright (c) 2018 Alexei A. Smekalkine <ikle@ikle.ru>
+ * Copyright (c) 2018-2020 Alexei A. Smekalkine <ikle@ikle.ru>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
@@ -134,6 +134,21 @@ struct conf *conf_clone (struct conf *o, ...)
 	c = conf_clonev (o, ap);
 	va_end (ap);
 	return c;
+}
+
+int conf_exists (struct conf *o, ...)
+{
+	struct conf *c;
+	va_list ap;
+	int ret;
+
+	va_start (ap, o);
+	c = conf_clonev (o, ap);
+	va_end (ap);
+
+	ret = c != NULL;
+	conf_free (c);
+	return ret;
 }
 
 static void chomp (char *s)
