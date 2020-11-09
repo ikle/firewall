@@ -82,8 +82,8 @@ static int set_iface (const char *iface, char *name, unsigned char *mask)
 		plus = *iface == '+';
 	}
 
-	if (plus)
-		mask[i - 1] = '\0';
+	if (!plus)
+		mask[i] = 1;
 
 	return 1;
 }
