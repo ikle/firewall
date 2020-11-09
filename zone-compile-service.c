@@ -102,15 +102,16 @@ get_peer_policy (struct conf *root, const char *zone, const char *peer,
 	return ok;
 }
 
-struct rule_ctx {
+struct policy_ctx {
 	struct xtc_handle *h;
+	const char *zone;
 	const char *chain;
 	struct ipt_rule *rule;
 };
 
 static int in_rule_cb (struct conf *root, char *iface, void *cookie)
 {
-	struct rule_ctx *o = cookie;
+	struct policy_ctx *o = cookie;
 
 	ipt_rule_set_in (o->rule, iface);
 	iptc_append_rule (o->chain, o->rule, o->h);
@@ -119,60 +120,56 @@ static int in_rule_cb (struct conf *root, char *iface, void *cookie)
 
 static int out_rule_cb (struct conf *root, char *iface, void *cookie)
 {
-	struct rule_ctx *o = cookie;
+	struct policy_ctx *o = cookie;
 
 	ipt_rule_set_out (o->rule, iface);
 	iptc_append_rule (o->chain, o->rule, o->h);
 	return 1;
 }
 
+static int in_policy_cb (struct conf *root, char *peer, void *cookie)
+{
+	struct policy_ctx *o = cookie;
+	char policy[CHAIN_SIZE], target[CHAIN_SIZE];
+
+	if (!get_peer_policy (root, o->zone, peer, policy))
+		return 1;
+
+	if (!get_policy_chain (policy, target))
+		return 0;
+
+	emit ("D: %s from %s policy %s %s\n", o->zone, peer, type, policy);
+
+	if (!iptc_is_chain (target, o->h)) {
+		emit ("E: Policy %s %s does not exists\n", type, policy);
+		errno = ENOENT;
+		return 0;
+	}
+
+	ipt_rule_set_goto (o->rule, target);
+	conf_iterate (root, in_rule_cb, o, peer, "interface", NULL);
+	return 1;
+}
+
 static int
 create_zone_chain (struct conf *root, const char *zone, struct xtc_handle *o)
 {
-	char chain[CHAIN_SIZE], target[CHAIN_SIZE];
-	char peer[CHAIN_SIZE], policy[CHAIN_SIZE];
-	struct conf *c;
-	struct rule_ctx r = {o, chain};
+	char chain[CHAIN_SIZE];
+	struct policy_ctx p = {o, zone, chain};
+	int ok;
 
 	emit ("D: create_zone_chain (%s)\n", zone);
 
 	if (!get_zone_chain (zone, chain) || !iptc_create_chain (chain, o))
 		return 0;
 
-	if ((c = conf_clone (root, zone, "from", NULL)) == NULL)
-		goto empty;
+	if ((p.rule = ipt_rule_alloc ()) == NULL)
+		return 0;
 
-	if ((r.rule = ipt_rule_alloc ()) == NULL)
-		goto no_rule;
+	ok = conf_iterate (root, in_policy_cb, &p, zone, "from", NULL);
 
-	while (conf_get (c, peer, sizeof (peer))) {
-		if (!get_peer_policy (root, zone, peer, policy))
-			continue;
-
-		if (!get_policy_chain (policy, target))
-			goto no_policy;
-
-		emit ("D: %s from %s policy %s %s\n", zone, peer, type, policy);
-
-		if (!iptc_is_chain (target, o)) {
-			emit ("E: Policy %s %s does not exists\n", type, policy);
-			errno = ENOENT;
-			goto no_policy;
-		}
-
-		ipt_rule_set_goto (r.rule, target);
-		conf_iterate (root, in_rule_cb, &r, peer, "interface", NULL);
-	}
-
-	ipt_rule_free (r.rule);
-	conf_free (c);
-empty:
-	return append_default (root, chain, zone, o);
-no_policy:
-	ipt_rule_free (r.rule);
-no_rule:
-	conf_free (c);
-	return 0;
+	ipt_rule_free (p.rule);
+	return ok && append_default (root, chain, zone, o);
 }
 
 static int
@@ -233,7 +230,7 @@ connect_local_out (struct conf *root, const char *zone, struct xtc_handle *o)
 	char target[CHAIN_SIZE];
 	char peer[CHAIN_SIZE], policy[CHAIN_SIZE];
 	struct conf *c;
-	struct rule_ctx r = {o, local_out};
+	struct policy_ctx r = {o, zone, local_out};
 
 	emit ("D: connect_local_out (%s)\n", zone);
 
