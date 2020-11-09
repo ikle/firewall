@@ -91,5 +91,6 @@ int get_chain_hash (const char *scope, const char *name, const char *type,
 		case '/': hash[i] = ','; break;
 		}
 
+	hash[i] = '\0';
 	return 1;
 }
