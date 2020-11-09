@@ -54,32 +54,6 @@ static const char *trans_action (const char *action)
 		action;
 }
 
-static int
-append_default (struct conf *root, const char *chain, const char *zone,
-		struct xtc *o)
-{
-	char action[CHAIN_SIZE + 1];
-	struct xt_rule *r;
-	int ok;
-
-	emit ("D: append_default (%s, %s)\n", chain, zone);
-
-	if (!conf_fetch (root, action, sizeof (action),
-			 zone, "default-action", NULL))
-		return 1;  /* default: return to main automata */
-
-	if ((r = xt_rule_alloc (o)) == NULL)
-		return 0;
-
-	if (!(ok = xt_rule_set_jump (r, trans_action (action))))
-		emit ("E: Invalid default-action for zone %s\n", zone);
-	else
-		ok = xtc_append_rule (o, chain, r);
-
-	xt_rule_free (r);
-	return ok;
-}
-
 struct policy_ctx {
 	struct xtc *h;
 	const char *type;
@@ -87,6 +61,30 @@ struct policy_ctx {
 	const char *chain;
 	struct xt_rule *rule;
 };
+
+static int append_default (struct conf *root, struct  policy_ctx *o)
+{
+	char action[CHAIN_SIZE + 1];
+	struct xt_rule *r;
+	int ok;
+
+	emit ("D: append_default (%s, %s)\n", o->chain, o->zone);
+
+	if (!conf_fetch (root, action, sizeof (action),
+			 o->zone, "default-action", NULL))
+		return 1;  /* default: return to main automata */
+
+	if ((r = xt_rule_alloc (o->h)) == NULL)
+		return 0;
+
+	if (!(ok = xt_rule_set_jump (r, trans_action (action))))
+		emit ("E: Invalid default-action for zone %s\n", o->zone);
+	else
+		ok = xtc_append_rule (o->h, o->chain, r);
+
+	xt_rule_free (r);
+	return ok;
+}
 
 static int in_rule_cb (struct conf *root, char *iface, void *cookie)
 {
@@ -180,7 +178,7 @@ static int create_zone_chain (struct conf *root, struct policy_ctx *o)
 		return 0;
 
 	return	conf_iterate (root, in_policy_cb, o, o->zone, "from", NULL) &&
-		append_default (root, chain, o->zone, o->h);
+		append_default (root, o);
 }
 
 static int connect_transit (struct conf *root, struct policy_ctx *o)
@@ -230,7 +228,7 @@ static int connect_local_out (struct conf *root, struct policy_ctx *o)
 	emit ("D: connect_local_out (%s)\n", o->zone);
 
 	return	conf_iterate (root, out_policy_cb, o, o->zone, "from", NULL) &&
-		append_default (root, local_out, o->zone, o->h);
+		append_default (root, o);
 }
 
 void zone_fini (struct xtc *o)
