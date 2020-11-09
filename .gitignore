@@ -3,6 +3,7 @@
 *.so.*
 *.pc
 *.swp
+*.patch
 *-test
 
 zone-compile
