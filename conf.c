@@ -195,3 +195,32 @@ int conf_rewind (struct conf *o)
 	conf_fini (o);
 	return conf_init (o);
 }
+
+int conf_iteratev (struct conf *o, conf_cb *cb, void *cookie, va_list ap)
+{
+	struct conf *c;
+	char entry[128];
+	int ok = 1;
+
+	if ((c = conf_clonev (o, ap)) == NULL)
+		return 0;
+
+	while (conf_get (c, entry, sizeof (entry)))
+		if (!(ok = cb (o, entry, cookie)))
+			break;
+
+	conf_free (c);
+	return ok;
+}
+
+int conf_iterate (struct conf *o, conf_cb *cb, void *cookie, ...)
+{
+	va_list ap;
+	int ok;
+
+	va_start (ap, cookie);
+	ok = conf_iteratev (o, cb, cookie, ap);
+	va_end (ap);
+
+	return ok;
+}

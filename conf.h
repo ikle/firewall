@@ -20,4 +20,7 @@ int conf_exists (struct conf *o, ...);
 int conf_get (struct conf *o, char *buf, size_t size);
 int conf_rewind (struct conf *o);
 
+typedef int (conf_cb) (struct conf *o, char *entry, void *cookie);
+int conf_iterate (struct conf *o, conf_cb *cb, void *cookie, ...);
+
 #endif  /* CONF_H */
