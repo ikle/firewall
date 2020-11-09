@@ -130,6 +130,7 @@ static int in_policy_cb (struct conf *root, char *peer, void *cookie)
 	if ((o->rule = ipt_rule_alloc ()) == NULL)
 		return 0;
 
+	ipt_rule_comment (o->rule, policy);
 	ipt_rule_set_goto (o->rule, target);
 	conf_iterate (root, in_rule_cb, o, peer, "interface", NULL);
 
@@ -160,6 +161,7 @@ static int out_policy_cb (struct conf *root, char *peer, void *cookie)
 	if ((o->rule = ipt_rule_alloc ()) == NULL)
 		return 0;
 
+	ipt_rule_comment (o->rule, policy);
 	ipt_rule_set_goto (o->rule, target);
 	conf_iterate (root, out_rule_cb, o, peer, "interface", NULL);
 
