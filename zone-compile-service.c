@@ -70,6 +70,9 @@ static int append_default (struct conf *root, struct  policy_ctx *o)
 
 	emit ("D: append_default (%s, %s)\n", o->chain, o->zone);
 
+	if (strncmp (o->type, "firewall", 8) != 0)
+		return 1;  /* not a firewall table */
+
 	if (!conf_fetch (root, action, sizeof (action),
 			 o->zone, "default-action", NULL))
 		return 1;  /* default: return to main automata */
