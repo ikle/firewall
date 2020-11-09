@@ -102,13 +102,37 @@ get_peer_policy (struct conf *root, const char *zone, const char *peer,
 	return ok;
 }
 
+struct rule_ctx {
+	struct xtc_handle *h;
+	const char *chain;
+	struct ipt_rule *rule;
+};
+
+static int in_rule_cb (struct conf *root, char *iface, void *cookie)
+{
+	struct rule_ctx *o = cookie;
+
+	ipt_rule_set_in (o->rule, iface);
+	iptc_append_rule (o->chain, o->rule, o->h);
+	return 1;
+}
+
+static int out_rule_cb (struct conf *root, char *iface, void *cookie)
+{
+	struct rule_ctx *o = cookie;
+
+	ipt_rule_set_out (o->rule, iface);
+	iptc_append_rule (o->chain, o->rule, o->h);
+	return 1;
+}
+
 static int
 create_zone_chain (struct conf *root, const char *zone, struct xtc_handle *o)
 {
 	char chain[CHAIN_SIZE], target[CHAIN_SIZE];
-	char peer[CHAIN_SIZE], policy[CHAIN_SIZE], iface[CHAIN_SIZE];
-	struct conf *c, *cc;
-	struct ipt_rule *r;
+	char peer[CHAIN_SIZE], policy[CHAIN_SIZE];
+	struct conf *c;
+	struct rule_ctx r = {o, chain};
 
 	emit ("D: create_zone_chain (%s)\n", zone);
 
@@ -118,7 +142,7 @@ create_zone_chain (struct conf *root, const char *zone, struct xtc_handle *o)
 	if ((c = conf_clone (root, zone, "from", NULL)) == NULL)
 		goto empty;
 
-	if ((r = ipt_rule_alloc ()) == NULL)
+	if ((r.rule = ipt_rule_alloc ()) == NULL)
 		goto no_rule;
 
 	while (conf_get (c, peer, sizeof (peer))) {
@@ -136,25 +160,16 @@ create_zone_chain (struct conf *root, const char *zone, struct xtc_handle *o)
 			goto no_policy;
 		}
 
-		ipt_rule_set_goto (r, target);
-
-		if ((cc = conf_clone (root, peer, "interface", NULL)) == NULL)
-			continue;
-
-		while (conf_get (cc, iface, sizeof (iface))) {
-			ipt_rule_set_in (r, iface);
-			iptc_append_rule (chain, r, o);
-		}
-
-		conf_free (cc);
+		ipt_rule_set_goto (r.rule, target);
+		conf_iterate (root, in_rule_cb, &r, peer, "interface", NULL);
 	}
 
-	ipt_rule_free (r);
+	ipt_rule_free (r.rule);
 	conf_free (c);
 empty:
 	return append_default (root, chain, zone, o);
 no_policy:
-	ipt_rule_free (r);
+	ipt_rule_free (r.rule);
 no_rule:
 	conf_free (c);
 	return 0;
@@ -216,16 +231,16 @@ static int
 connect_local_out (struct conf *root, const char *zone, struct xtc_handle *o)
 {
 	char target[CHAIN_SIZE];
-	char peer[CHAIN_SIZE], policy[CHAIN_SIZE], iface[CHAIN_SIZE];
-	struct conf *c, *cc;
-	struct ipt_rule *r;
+	char peer[CHAIN_SIZE], policy[CHAIN_SIZE];
+	struct conf *c;
+	struct rule_ctx r = {o, local_out};
 
 	emit ("D: connect_local_out (%s)\n", zone);
 
 	if ((c = conf_clone (root, zone, "from", NULL)) == NULL)
 		goto empty;
 
-	if ((r = ipt_rule_alloc ()) == NULL)
+	if ((r.rule = ipt_rule_alloc ()) == NULL)
 		goto no_rule;
 
 	while (conf_get (c, peer, sizeof (peer))) {
@@ -243,25 +258,16 @@ connect_local_out (struct conf *root, const char *zone, struct xtc_handle *o)
 			goto no_policy;
 		}
 
-		ipt_rule_set_goto (r, target);
-
-		if ((cc = conf_clone (root, peer, "interface", NULL)) == NULL)
-			continue;
-
-		while (conf_get (cc, iface, sizeof (iface))) {
-			ipt_rule_set_out (r, iface);
-			iptc_append_rule (local_out, r, o);
-		}
-
-		conf_free (cc);
+		ipt_rule_set_goto (r.rule, target);
+		conf_iterate (root, out_rule_cb, &r, peer, "interface", NULL);
 	}
 
-	ipt_rule_free (r);
+	ipt_rule_free (r.rule);
 	conf_free (c);
 empty:
 	return append_default (root, local_out, zone, o);
 no_policy:
-	ipt_rule_free (r);
+	ipt_rule_free (r.rule);
 no_rule:
 	conf_free (c);
 	return 0;
