@@ -4,3 +4,5 @@
 *.pc
 *.swp
 *-test
+
+zone-compile
