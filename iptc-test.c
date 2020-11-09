@@ -9,6 +9,8 @@
 #include <errno.h>
 #include <stdio.h>
 
+#include <libiptc/libiptc.h>
+
 #include "ipt.h"
 
 static int test (struct xtc_handle *o, const char *chain)

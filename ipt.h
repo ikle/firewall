@@ -9,7 +9,7 @@
 #ifndef NET_IPT_H
 #define NET_IPT_H  1
 
-#include <libiptc/libiptc.h>
+struct xtc_handle;
 
 struct ipt_rule *ipt_rule_alloc (void);
 void ipt_rule_free (struct ipt_rule *o);

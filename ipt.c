@@ -13,6 +13,8 @@
 
 #include "ipt.h"
 
+#include <libiptc/libiptc.h>
+
 struct match {
 	struct match *prev;
 	struct xt_entry_match m;

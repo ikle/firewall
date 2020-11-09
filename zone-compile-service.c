@@ -11,6 +11,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <libiptc/libiptc.h>
+
 #include "chain-hash.h"
 #include "conf.h"
 #include "ipt.h"
