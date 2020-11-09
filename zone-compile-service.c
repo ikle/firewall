@@ -181,34 +181,22 @@ create_zone_chain (struct conf *root, const char *zone, struct xtc_handle *o)
 static int
 connect_transit (struct conf *root, const char *zone, struct xtc_handle *o)
 {
-	char target[CHAIN_SIZE], iface[CHAIN_SIZE];
-	struct conf *c;
-	struct ipt_rule *r;
+	char target[CHAIN_SIZE];
+	struct policy_ctx p = {o, zone, forward};
 
 	emit ("D: connect_transit (%s)\n", zone);
 
 	if (!get_zone_chain (zone, target))
 		return 0;
 
-	if ((c = conf_clone (root, zone, "interface", NULL)) == NULL)
-		return 1;
+	if ((p.rule = ipt_rule_alloc ()) == NULL)
+		return 0;
 
-	if ((r = ipt_rule_alloc ()) == NULL)
-		goto no_rule;
+	ipt_rule_set_goto (p.rule, target);
+	conf_iterate (root, out_rule_cb, &p, zone, "interface", NULL);
 
-	ipt_rule_set_goto (r, target);
-
-	while (conf_get (c, iface, sizeof (iface))) {
-		ipt_rule_set_out (r, iface);
-		iptc_append_rule (forward, r, o);
-	}
-
-	ipt_rule_free (r);
-	conf_free (c);
+	ipt_rule_free (p.rule);
 	return 1;
-no_rule:
-	conf_free (c);
-	return 0;
 }
 
 static int
