@@ -224,3 +224,31 @@ int conf_iterate (struct conf *o, conf_cb *cb, void *cookie, ...)
 
 	return ok;
 }
+
+int conf_fetchv (struct conf *o, char *buf, size_t size, va_list ap)
+{
+	struct conf *c;
+	int ok;
+
+	if ((c = conf_clonev (o, ap)) == NULL)
+		return 0;
+
+	ok = (c->file != NULL && fgets (buf, size, c->file) != NULL);
+	if (ok)
+		chomp (buf);
+
+	conf_free (c);
+	return ok;
+}
+
+int conf_fetch (struct conf *o, char *buf, size_t size, ...)
+{
+	va_list ap;
+	int ok;
+
+	va_start (ap, size);
+	ok = conf_fetchv (o, buf, size, ap);
+	va_end (ap);
+
+	return ok;
+}
