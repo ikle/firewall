@@ -54,21 +54,18 @@ static int
 append_default (struct conf *root, const char *chain, const char *zone,
 		struct xtc_handle *o)
 {
-	struct conf *c;
 	char action[CHAIN_SIZE + 1];
 	struct ipt_rule *r;
 	int ok;
 
 	emit ("D: append_default (%s, %s)\n", chain, zone);
 
-	if ((c = conf_clone (root, zone, "default-action", NULL)) == NULL)
+	if (!conf_fetch (root, action, sizeof (action),
+			 zone, "default-action", NULL))
 		return 1;  /* default: return to main automata */
 
-	if (conf_get (c, action, sizeof (action)))
-		goto no_action;
-
 	if ((r = ipt_rule_alloc ()) == NULL)
-		goto no_rule;
+		return 0;
 
 	if (!(ok = ipt_rule_set_jump (r, action)))
 		emit ("E: Invalid default-action for zone %s\n", zone);
@@ -76,30 +73,15 @@ append_default (struct conf *root, const char *chain, const char *zone,
 		ok = iptc_append_rule (chain, r, o);
 
 	ipt_rule_free (r);
-	conf_free (c);
 	return ok;
-no_rule:
-	conf_free (c);
-	return 0;
-no_action:
-	conf_free (c);
-	return 1;  /* default: return to main automata */
 }
 
 static int
 get_peer_policy (struct conf *root, const char *zone, const char *peer,
 		 char *policy)
 {
-	struct conf *c;
-	int ok;
-
-	c = conf_clone (root, zone, "from", peer, "policy", type, NULL);
-	if (c == NULL)
-		return 0;
-
-	ok = conf_get (c, policy, CHAIN_SIZE);
-	conf_free (c);
-	return ok;
+	return conf_fetch (root, policy, CHAIN_SIZE,
+			   zone, "from", peer, "policy", type, NULL);
 }
 
 struct policy_ctx {
