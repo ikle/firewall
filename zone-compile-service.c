@@ -49,6 +49,12 @@ static int get_policy_chain (const char *policy, char *chain)
 	return get_chain_hash (type, policy, NULL, chain);
 }
 
+static const char *trans_action (const char *action)
+{
+	return	strcmp (action, "drop")   == 0 ? "DROP"   :
+		strcmp (action, "reject") == 0 ? "REJECT" :
+		action;
+}
 
 static int
 append_default (struct conf *root, const char *chain, const char *zone,
@@ -67,7 +73,7 @@ append_default (struct conf *root, const char *chain, const char *zone,
 	if ((r = ipt_rule_alloc ()) == NULL)
 		return 0;
 
-	if (!(ok = ipt_rule_set_jump (r, action)))
+	if (!(ok = ipt_rule_set_jump (r, trans_action (action))))
 		emit ("E: Invalid default-action for zone %s\n", zone);
 	else
 		ok = iptc_append_rule (chain, r, o);
