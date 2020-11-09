@@ -82,14 +82,6 @@ append_default (struct conf *root, const char *chain, const char *zone,
 	return ok;
 }
 
-static int
-get_peer_policy (struct conf *root, const char *zone, const char *peer,
-		 char *policy)
-{
-	return conf_fetch (root, policy, CHAIN_SIZE,
-			   zone, "from", peer, "policy", type, NULL);
-}
-
 struct policy_ctx {
 	struct xtc_handle *h;
 	const char *zone;
@@ -120,7 +112,8 @@ static int in_policy_cb (struct conf *root, char *peer, void *cookie)
 	struct policy_ctx *o = cookie;
 	char policy[CHAIN_SIZE], target[CHAIN_SIZE];
 
-	if (!get_peer_policy (root, o->zone, peer, policy))
+	if (!conf_fetch (root, policy, sizeof (policy),
+			 o->zone, "from", peer, "policy", type, NULL))
 		return 1;
 
 	if (!get_policy_chain (policy, target))
@@ -144,7 +137,8 @@ static int out_policy_cb (struct conf *root, char *peer, void *cookie)
 	struct policy_ctx *o = cookie;
 	char policy[CHAIN_SIZE], target[CHAIN_SIZE];
 
-	if (!get_peer_policy (root, peer, o->zone, policy))
+	if (!conf_fetch (root, policy, sizeof (policy),
+			 peer, "from", o->zone, "policy", type, NULL))
 		return 1;
 
 	if (!get_policy_chain (policy, target))
