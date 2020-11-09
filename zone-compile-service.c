@@ -127,8 +127,13 @@ static int in_policy_cb (struct conf *root, char *peer, void *cookie)
 		return 0;
 	}
 
+	if ((o->rule = ipt_rule_alloc ()) == NULL)
+		return 0;
+
 	ipt_rule_set_goto (o->rule, target);
 	conf_iterate (root, in_rule_cb, o, peer, "interface", NULL);
+
+	ipt_rule_free (o->rule);
 	return 1;
 }
 
@@ -152,8 +157,13 @@ static int out_policy_cb (struct conf *root, char *peer, void *cookie)
 		return 0;
 	}
 
+	if ((o->rule = ipt_rule_alloc ()) == NULL)
+		return 0;
+
 	ipt_rule_set_goto (o->rule, target);
 	conf_iterate (root, out_rule_cb, o, peer, "interface", NULL);
+
+	ipt_rule_free (o->rule);
 	return 1;
 }
 
@@ -162,20 +172,14 @@ create_zone_chain (struct conf *root, const char *zone, struct xtc_handle *o)
 {
 	char chain[CHAIN_SIZE];
 	struct policy_ctx p = {o, zone, chain};
-	int ok;
 
 	emit ("D: create_zone_chain (%s)\n", zone);
 
 	if (!get_zone_chain (zone, chain) || !iptc_create_chain (chain, o))
 		return 0;
 
-	if ((p.rule = ipt_rule_alloc ()) == NULL)
-		return 0;
-
-	ok = conf_iterate (root, in_policy_cb, &p, zone, "from", NULL);
-
-	ipt_rule_free (p.rule);
-	return ok && append_default (root, chain, zone, o);
+	return	conf_iterate (root, in_policy_cb, &p, zone, "from", NULL) &&
+		append_default (root, chain, zone, o);
 }
 
 static int
@@ -222,17 +226,11 @@ static int
 connect_local_out (struct conf *root, const char *zone, struct xtc_handle *o)
 {
 	struct policy_ctx p = {o, zone, local_out};
-	int ok;
 
 	emit ("D: connect_local_out (%s)\n", zone);
 
-	if ((p.rule = ipt_rule_alloc ()) == NULL)
-		return 0;
-
-	ok = conf_iterate (root, out_policy_cb, &p, zone, "from", NULL);
-
-	ipt_rule_free (p.rule);
-	return ok && append_default (root, local_out, zone, o);
+	return	conf_iterate (root, out_policy_cb, &p, zone, "from", NULL) &&
+		append_default (root, local_out, zone, o);
 }
 
 void zone_fini (struct xtc_handle *o)
