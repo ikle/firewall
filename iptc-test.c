@@ -28,7 +28,7 @@ static int test (struct xtc_handle *o, const char *chain)
 	if (!iptc_flush_entries (chain, o))
 		return 0;
 
-	if ((r = xt_rule_alloc ()) == NULL)
+	if ((r = xt_rule_alloc (PF_INET)) == NULL)
 		return 0;
 
 	xt_rule_set_in   (r, "eth2");

@@ -49,7 +49,7 @@ struct xt_rule {
 	struct match *m;
 };
 
-struct xt_rule *xt_rule_alloc (void)
+struct xt_rule *xt_rule_alloc (int domain)
 {
 	struct xt_rule *o;
 

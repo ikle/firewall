@@ -11,7 +11,7 @@
 
 struct xtc_handle;
 
-struct xt_rule *xt_rule_alloc (void);
+struct xt_rule *xt_rule_alloc (int domain);
 void xt_rule_free (struct xt_rule *o);
 
 int xtc_append_rule (const char *chain, struct xt_rule *r,
