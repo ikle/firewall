@@ -295,10 +295,32 @@ int zone_init (struct xtc *o, const char *type)
 	return ok;
 }
 
+int zone_update (const char *type)
+{
+	int domain = PF_INET;
+	const char *table = "filter", *p;
+	struct xtc *o;
+	int ok;
+
+	if ((p = strrchr (type, '-')) != NULL && strcmp (p, "-ipv6") == 0)
+		domain = PF_INET6;
+
+	if (strncmp (type, "firewall", 8) != 0)
+		table = "mangle";
+
+	if ((o = xtc_alloc (domain, table)) == NULL)
+		return 0;
+
+	zone_fini (o);
+	ok = zone_init (o, type);
+
+	xtc_free (o);
+	return ok;
+}
+
 int main (int argc, char *argv[])
 {
 	size_t i;
-	struct xtc *o;
 
 	for (; argc > 1 && argv[1][0] == '-'; --argc, ++argv)
 		for (i = 1; argv[1][i] != '\0'; ++i)
@@ -306,19 +328,17 @@ int main (int argc, char *argv[])
 			case 'v':	++verbose; break;
 			}
 
-	if ((o = xtc_alloc (PF_INET, "filter")) == NULL) {
+	if (argc != 2) {
+		emit ("usage:\n"
+		      "\tzone-compile [-v] firewall\n"
+		      "\tzone-compile [-v] firewall-ipv6\n");
+		return 1;
+	}
+
+	if (!zone_update (argv[1])) {
 		emit ("E: %s\n", xtc_error (PF_INET));
 		return 1;
 	}
 
-	zone_fini (o);
-
-	if (!zone_init (o, "firewall")) {
-		emit ("E: %s\n", xtc_error (PF_INET));
-		xtc_free (o);
-		return 1;
-	}
-
-	xtc_free (o);
 	return 0;
 }
