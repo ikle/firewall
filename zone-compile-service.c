@@ -15,7 +15,7 @@
 
 #include "chain-hash.h"
 #include "conf.h"
-#include "ipt.h"
+#include "xt-rule.h"
 
 static const char *local_in  = "ZONE_LOCAL_IN";
 static const char *forward   = "ZONE_FORWARD";

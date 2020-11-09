@@ -11,7 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "ipt.h"
+#include "xt-rule.h"
 
 #include <libiptc/libiptc.h>
 #include <libiptc/libip6tc.h>

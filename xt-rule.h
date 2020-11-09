@@ -1,13 +1,13 @@
 /*
- * IP Tables Helpers
+ * IP Tables Rule Helpers
  *
  * Copyright (c) 2020 Alexei A. Smekalkine <ikle@ikle.ru>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-#ifndef NET_IPT_H
-#define NET_IPT_H  1
+#ifndef NET_XT_RULE_H
+#define NET_XT_RULE_H  1
 
 struct xtc_handle;
 
@@ -25,4 +25,4 @@ int xt_rule_set_out (struct xt_rule *o, const char *iface);
 
 int xt_rule_comment (struct xt_rule *o, const char *comment);
 
-#endif  /* NET_IPT_H */
+#endif  /* NET_XT_RULE_H */
