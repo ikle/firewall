@@ -256,9 +256,26 @@ void zone_fini (struct xtc_handle *o)
 		}
 }
 
+static int zone_chain_cb (struct conf *root, char *zone, void *cookie)
+{
+	struct xtc_handle *o = cookie;
+
+	return create_zone_chain (root, zone, o);
+}
+
+static int zone_policy_cb (struct conf *root, char *zone, void *cookie)
+{
+	struct xtc_handle *o = cookie;
+
+	return conf_exists (root, zone, "local-zone", NULL) ? (
+		connect_local_in  (root, zone, o) &&
+		connect_local_out (root, zone, o)
+	) :
+		connect_transit (root, zone, o);
+}
+
 int zone_init (struct xtc_handle *o)
 {
-	char zone[CHAIN_SIZE];
 	struct conf *root;
 	int ok;
 
@@ -267,29 +284,12 @@ int zone_init (struct xtc_handle *o)
 	if ((root = conf_clone (NULL, "zone-policy", "zone", NULL)) == NULL)
 		return 0;
 
-	while (conf_get (root, zone, sizeof (zone)))
-		if (!create_zone_chain (root, zone, o))
-			goto error;
-
-	if (!conf_rewind (root))
-		goto error;
-
-	while (conf_get (root, zone, sizeof (zone))) {
-		ok = conf_exists (root, zone, "local-zone", NULL) ? (
-			connect_local_in  (root, zone, o) &&
-			connect_local_out (root, zone, o)
-		) :
-			connect_transit (root, zone, o);
-
-		if (!ok)
-			goto error;
-	}
+	ok = conf_iterate (root, zone_chain_cb,  o, NULL) &&
+	     conf_iterate (root, zone_policy_cb, o, NULL) &&
+	     iptc_commit (o);
 
 	conf_free (root);
-	return iptc_commit (o);
-error:
-	conf_free (root);
-	return 0;
+	return ok;
 }
 
 int main (int argc, char *argv[])
