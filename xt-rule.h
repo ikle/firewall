@@ -9,13 +9,12 @@
 #ifndef NET_XT_RULE_H
 #define NET_XT_RULE_H  1
 
-struct xtc_handle;
+#include "xtc.h"
 
 struct xt_rule *xt_rule_alloc (int domain);
 void xt_rule_free (struct xt_rule *o);
 
-int xtc_append_rule (const char *chain, struct xt_rule *r,
-		     struct xtc_handle *o);
+int xtc_append_rule (struct xtc *o, const char *chain, struct xt_rule *r);
 
 int xt_rule_set_jump (struct xt_rule *o, const char *target);
 int xt_rule_set_goto (struct xt_rule *o, const char *target);

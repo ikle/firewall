@@ -11,8 +11,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <libiptc/libiptc.h>
-
 #include "chain-hash.h"
 #include "conf.h"
 #include "xt-rule.h"
@@ -60,7 +58,7 @@ static const char *trans_action (const char *action)
 
 static int
 append_default (struct conf *root, const char *chain, const char *zone,
-		struct xtc_handle *o)
+		struct xtc *o)
 {
 	char action[CHAIN_SIZE + 1];
 	struct xt_rule *r;
@@ -78,14 +76,14 @@ append_default (struct conf *root, const char *chain, const char *zone,
 	if (!(ok = xt_rule_set_jump (r, trans_action (action))))
 		emit ("E: Invalid default-action for zone %s\n", zone);
 	else
-		ok = xtc_append_rule (chain, r, o);
+		ok = xtc_append_rule (o, chain, r);
 
 	xt_rule_free (r);
 	return ok;
 }
 
 struct policy_ctx {
-	struct xtc_handle *h;
+	struct xtc *h;
 	const char *zone;
 	const char *chain;
 	struct xt_rule *rule;
@@ -96,7 +94,7 @@ static int in_rule_cb (struct conf *root, char *iface, void *cookie)
 	struct policy_ctx *o = cookie;
 
 	xt_rule_set_in (o->rule, iface);
-	xtc_append_rule (o->chain, o->rule, o->h);
+	xtc_append_rule (o->h, o->chain, o->rule);
 	return 1;
 }
 
@@ -105,7 +103,7 @@ static int out_rule_cb (struct conf *root, char *iface, void *cookie)
 	struct policy_ctx *o = cookie;
 
 	xt_rule_set_out (o->rule, iface);
-	xtc_append_rule (o->chain, o->rule, o->h);
+	xtc_append_rule (o->h, o->chain, o->rule);
 	return 1;
 }
 
@@ -123,7 +121,7 @@ static int in_policy_cb (struct conf *root, char *peer, void *cookie)
 	if (!get_policy_chain (policy, target))
 		return 0;
 
-	if (!iptc_is_chain (target, o->h)) {
+	if (!xtc_is_chain (o->h, target)) {
 		emit ("E: Policy %s %s does not exists\n", type, policy);
 		errno = ENOENT;
 		return 0;
@@ -154,7 +152,7 @@ static int out_policy_cb (struct conf *root, char *peer, void *cookie)
 	if (!get_policy_chain (policy, target))
 		return 0;
 
-	if (!iptc_is_chain (target, o->h)) {
+	if (!xtc_is_chain (o->h, target)) {
 		emit ("E: Policy %s %s does not exists\n", type, policy);
 		errno = ENOENT;
 		return 0;
@@ -172,22 +170,21 @@ static int out_policy_cb (struct conf *root, char *peer, void *cookie)
 }
 
 static int
-create_zone_chain (struct conf *root, const char *zone, struct xtc_handle *o)
+create_zone_chain (struct conf *root, const char *zone, struct xtc *o)
 {
 	char chain[CHAIN_SIZE];
 	struct policy_ctx p = {o, zone, chain};
 
 	emit ("D: create_zone_chain (%s)\n", zone);
 
-	if (!get_zone_chain (zone, chain) || !iptc_create_chain (chain, o))
+	if (!get_zone_chain (zone, chain) || !xtc_create_chain (o, chain))
 		return 0;
 
 	return	conf_iterate (root, in_policy_cb, &p, zone, "from", NULL) &&
 		append_default (root, chain, zone, o);
 }
 
-static int
-connect_transit (struct conf *root, const char *zone, struct xtc_handle *o)
+static int connect_transit (struct conf *root, const char *zone, struct xtc *o)
 {
 	char target[CHAIN_SIZE];
 	struct policy_ctx p = {o, zone, forward};
@@ -207,8 +204,7 @@ connect_transit (struct conf *root, const char *zone, struct xtc_handle *o)
 	return 1;
 }
 
-static int
-connect_local_in (struct conf *root, const char *zone, struct xtc_handle *o)
+static int connect_local_in (struct conf *root, const char *zone, struct xtc *o)
 {
 	char target[CHAIN_SIZE];
 	struct xt_rule *r;
@@ -221,14 +217,13 @@ connect_local_in (struct conf *root, const char *zone, struct xtc_handle *o)
 		return 0;
 
 	xt_rule_set_goto (r, target);
-	ok = xtc_append_rule (local_in, r, o);
+	ok = xtc_append_rule (o, local_in, r);
 
 	xt_rule_free (r);
 	return ok;
 }
 
-static int
-connect_local_out (struct conf *root, const char *zone, struct xtc_handle *o)
+static int connect_local_out (struct conf *root, const char *zone, struct xtc *o)
 {
 	struct policy_ctx p = {o, zone, local_out};
 
@@ -238,37 +233,37 @@ connect_local_out (struct conf *root, const char *zone, struct xtc_handle *o)
 		append_default (root, local_out, zone, o);
 }
 
-void zone_fini (struct xtc_handle *o)
+void zone_fini (struct xtc *o)
 {
 	const char *chain;
 
-	iptc_flush_entries (local_in,  o);
-	iptc_flush_entries (forward,   o);
-	iptc_flush_entries (local_out, o);
+	xtc_flush_entries (o, local_in);
+	xtc_flush_entries (o, forward);
+	xtc_flush_entries (o, local_out);
 
 	emit ("D: zone_fini ()\n");
 
 	for (
-		chain = iptc_first_chain (o);
+		chain = xtc_first_chain (o);
 		chain != NULL;
-		chain = iptc_next_chain (o)
+		chain = xtc_next_chain (o)
 	)
 		if (strncmp (chain, "ZONE-", 5) == 0) {
-			iptc_flush_entries (chain, o);
-			iptc_delete_chain  (chain, o);
+			xtc_flush_entries (o, chain);
+			xtc_delete_chain  (o, chain);
 		}
 }
 
 static int zone_chain_cb (struct conf *root, char *zone, void *cookie)
 {
-	struct xtc_handle *o = cookie;
+	struct xtc *o = cookie;
 
 	return create_zone_chain (root, zone, o);
 }
 
 static int zone_policy_cb (struct conf *root, char *zone, void *cookie)
 {
-	struct xtc_handle *o = cookie;
+	struct xtc *o = cookie;
 
 	return conf_exists (root, zone, "local-zone", NULL) ? (
 		connect_local_in  (root, zone, o) &&
@@ -277,7 +272,7 @@ static int zone_policy_cb (struct conf *root, char *zone, void *cookie)
 		connect_transit (root, zone, o);
 }
 
-int zone_init (struct xtc_handle *o)
+int zone_init (struct xtc *o)
 {
 	struct conf *root;
 	int ok;
@@ -289,7 +284,7 @@ int zone_init (struct xtc_handle *o)
 
 	ok = conf_iterate (root, zone_chain_cb,  o, NULL) &&
 	     conf_iterate (root, zone_policy_cb, o, NULL) &&
-	     iptc_commit (o);
+	     xtc_commit (o);
 
 	conf_free (root);
 	return ok;
@@ -298,7 +293,7 @@ int zone_init (struct xtc_handle *o)
 int main (int argc, char *argv[])
 {
 	size_t i;
-	struct xtc_handle *o;
+	struct xtc *o;
 
 	for (; argc > 1 && argv[1][0] == '-'; --argc, ++argv)
 		for (i = 1; argv[1][i] != '\0'; ++i)
@@ -306,19 +301,19 @@ int main (int argc, char *argv[])
 			case 'v':	++verbose; break;
 			}
 
-	if ((o = iptc_init ("filter")) == NULL) {
-		emit ("E: %s\n", iptc_strerror (errno));
+	if ((o = xtc_alloc (PF_INET, "filter")) == NULL) {
+		emit ("E: %s\n", xtc_error (PF_INET));
 		return 1;
 	}
 
 	zone_fini (o);
 
 	if (!zone_init (o)) {
-		emit ("E: %s\n", iptc_strerror (errno));
-		iptc_free (o);
+		emit ("E: %s\n", xtc_error (PF_INET));
+		xtc_free (o);
 		return 1;
 	}
 
-	iptc_free (o);
+	xtc_free (o);
 	return 0;
 }

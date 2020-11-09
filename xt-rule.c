@@ -132,57 +132,57 @@ static size_t match_push (char *to, struct match *m)
 	return offset + m->m.u.user.match_size;
 }
 
-static int
-ipv4_append_rule (const char *chain, struct xt_rule *r, struct xtc_handle *o)
+static void *ipv4_make_entry (struct xt_rule *o)
 {
 	char *e;
 	size_t offset;
-	int ok;
 
-	if ((e = calloc (1, r->ipv4.next_offset)) == NULL)
-		return 0;
+	if ((e = calloc (1, o->ipv4.next_offset)) == NULL)
+		return NULL;
 
-	memcpy (e, &r->ipv4, sizeof (r->ipv4));
-	offset = sizeof (r->ipv4);
+	memcpy (e, &o->ipv4, sizeof (o->ipv4));
+	offset = sizeof (o->ipv4);
 
-	offset += match_push (e + offset, r->m);
+	offset += match_push (e + offset, o->m);
 
-	memcpy (e + offset, &r->t, r->t.target.u.user.target_size);
-
-	ok = iptc_append_entry (chain, (void *) e, o);
-	free (e);
-	return ok;
+	memcpy (e + offset, &o->t, o->t.target.u.user.target_size);
+	return e;
 }
 
-static int
-ipv6_append_rule (const char *chain, struct xt_rule *r, struct xtc_handle *o)
+static void *ipv6_make_entry (struct xt_rule *o)
 {
 	char *e;
 	size_t offset;
-	int ok;
 
-	if ((e = calloc (1, r->ipv6.next_offset)) == NULL)
-		return 0;
+	if ((e = calloc (1, o->ipv6.next_offset)) == NULL)
+		return NULL;
 
-	memcpy (e, &r->ipv6, sizeof (r->ipv6));
-	offset = sizeof (r->ipv6);
+	memcpy (e, &o->ipv6, sizeof (o->ipv6));
+	offset = sizeof (o->ipv6);
 
-	offset += match_push (e + offset, r->m);
+	offset += match_push (e + offset, o->m);
 
-	memcpy (e + offset, &r->t, r->t.target.u.user.target_size);
-
-	ok = ip6tc_append_entry (chain, (void *) e, o);
-	free (e);
-	return ok;
+	memcpy (e + offset, &o->t, o->t.target.u.user.target_size);
+	return e;
 }
 
-int xtc_append_rule (const char *chain, struct xt_rule *r, struct xtc_handle *o)
+int xtc_append_rule (struct xtc *o, const char *chain, struct xt_rule *r)
 {
+	void *e;
+	int ok;
+
 	switch (r->domain) {
-	case PF_INET:	return ipv4_append_rule (chain, r, o);
-	case PF_INET6:	return ipv6_append_rule (chain, r, o);
+	case PF_INET:	e = ipv4_make_entry (r); break;
+	case PF_INET6:	e = ipv6_make_entry (r); break;
 	default:	return 0;
 	}
+
+	if (e == NULL)
+		return 0;
+
+	ok = xtc_append_entry (o, chain, e);
+	free (e);
+	return ok;
 }
 
 int xt_rule_set_jump (struct xt_rule *o, const char *target)

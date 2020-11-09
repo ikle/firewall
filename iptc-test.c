@@ -13,19 +13,19 @@
 
 #include "xt-rule.h"
 
-static int test (struct xtc_handle *o, const char *chain)
+static int test (struct xtc *o, const char *chain)
 {
 	const char *policy = "policy-0";
 	struct xt_rule *r;
 	int ok;
 
-	if (!iptc_is_chain (policy, o) && !iptc_create_chain (policy, o))
+	if (!xtc_is_chain (o, policy) && !xtc_create_chain (o, policy))
 		return 0;
 
-	if (!iptc_is_chain (chain, o) && !iptc_create_chain (chain, o))
+	if (!xtc_is_chain (o, chain)  && !xtc_create_chain (o, chain))
 		return 0;
 
-	if (!iptc_flush_entries (chain, o))
+	if (!xtc_flush_entries (o, chain))
 		return 0;
 
 	if ((r = xt_rule_alloc (PF_INET)) == NULL)
@@ -34,35 +34,35 @@ static int test (struct xtc_handle *o, const char *chain)
 	xt_rule_set_in   (r, "eth2");
 	xt_rule_set_goto (r, policy);
 
-	ok = xtc_append_rule (chain, r, o);
+	ok = xtc_append_rule (o, chain, r);
 	xt_rule_free (r);
 
-	return ok && iptc_commit (o);
+	return ok && xtc_commit (o);
 }
 
 int main (int argc, char *argv[])
 {
-	struct xtc_handle *o;
+	struct xtc *o;
 	const char *chain;
 	const struct ipt_entry *e;
 	const char *target;
 
-	if ((o = iptc_init ("filter")) == NULL) {
-		fprintf (stderr, "E: %s\n", iptc_strerror (errno));
+	if ((o = xtc_alloc (PF_INET, "filter")) == NULL) {
+		fprintf (stderr, "E: %s\n", xtc_error (PF_INET));
 		return 1;
 	}
 
 	for (
-		chain = iptc_first_chain (o);
+		chain = xtc_first_chain (o);
 		chain != NULL;
-		chain = iptc_next_chain (o)
+		chain = xtc_next_chain (o)
 	) {
 		printf ("-N %s\n", chain);
 
 		for (
-			e = iptc_first_rule (chain, o);
+			e = xtc_first_rule (o, chain);
 			e != NULL;
-			e = iptc_next_rule (e, o)
+			e = xtc_next_rule (o, e)
 		) {
 			printf ("-A %s", chain);
 
@@ -72,7 +72,7 @@ int main (int argc, char *argv[])
 			if (e->ip.outiface[0] != '\0')
 				printf (" -o %.16s", e->ip.outiface);
 
-			if ((target = iptc_get_target (e, o)) != NULL)
+			if ((target = xtc_get_target (o, e)) != NULL)
 				printf (" -%c %s",
 					e->ip.flags & IPT_F_GOTO ? 'g' : 'j',
 					target);
@@ -82,9 +82,9 @@ int main (int argc, char *argv[])
 	}
 
 	if (!test (o, "test"))
-		fprintf (stderr, "E: %s\n", iptc_strerror (errno));
+		fprintf (stderr, "E: %s\n", xtc_error (PF_INET));
 
 //	dump_entries (o);
-	iptc_free (o);
+	xtc_free (o);
 	return 0;
 }
