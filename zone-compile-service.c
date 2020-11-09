@@ -70,7 +70,7 @@ append_default (struct conf *root, const char *chain, const char *zone,
 			 zone, "default-action", NULL))
 		return 1;  /* default: return to main automata */
 
-	if ((r = xt_rule_alloc (PF_INET)) == NULL)
+	if ((r = xt_rule_alloc (o)) == NULL)
 		return 0;
 
 	if (!(ok = xt_rule_set_jump (r, trans_action (action))))
@@ -127,7 +127,7 @@ static int in_policy_cb (struct conf *root, char *peer, void *cookie)
 		return 0;
 	}
 
-	if ((o->rule = xt_rule_alloc (PF_INET)) == NULL)
+	if ((o->rule = xt_rule_alloc (o->h)) == NULL)
 		return 0;
 
 	xt_rule_comment (o->rule, policy);
@@ -158,7 +158,7 @@ static int out_policy_cb (struct conf *root, char *peer, void *cookie)
 		return 0;
 	}
 
-	if ((o->rule = xt_rule_alloc (PF_INET)) == NULL)
+	if ((o->rule = xt_rule_alloc (o->h)) == NULL)
 		return 0;
 
 	xt_rule_comment (o->rule, policy);
@@ -194,7 +194,7 @@ static int connect_transit (struct conf *root, const char *zone, struct xtc *o)
 	if (!get_zone_chain (zone, target))
 		return 0;
 
-	if ((p.rule = xt_rule_alloc (PF_INET)) == NULL)
+	if ((p.rule = xt_rule_alloc (o)) == NULL)
 		return 0;
 
 	xt_rule_set_goto (p.rule, target);
@@ -213,7 +213,7 @@ static int connect_local_in (struct conf *root, const char *zone, struct xtc *o)
 	emit ("D: connect_local_in (%s)\n", zone);
 
 	if (!get_zone_chain (zone, target) ||
-	    (r = xt_rule_alloc (PF_INET)) == NULL)
+	    (r = xt_rule_alloc (o)) == NULL)
 		return 0;
 
 	xt_rule_set_goto (r, target);

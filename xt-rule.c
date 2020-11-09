@@ -55,18 +55,18 @@ struct xt_rule {
 	};
 };
 
-struct xt_rule *xt_rule_alloc (int domain)
+struct xt_rule *xt_rule_alloc (struct xtc *xtc)
 {
 	struct xt_rule *o;
 
 	if ((o = calloc (1, sizeof (*o))) == NULL)
 		return NULL;
 
-	o->domain = domain;
+	o->domain = xtc_domain (xtc);
 
 	o->t.target.u.user.target_size = XT_ALIGN (sizeof (o->t));
 
-	switch (domain) {
+	switch (o->domain) {
 	case PF_INET:
 		o->ipv4.target_offset = sizeof (o->ipv4);
 		o->ipv4.next_offset = o->ipv4.target_offset +

@@ -16,6 +16,8 @@
 struct xtc *xtc_alloc (int domain, const char *table);
 void xtc_free (struct xtc *o);
 
+int xtc_domain (struct xtc *o);
+
 const char *xtc_error (int domain);
 
 int xtc_is_chain (struct xtc *o, const char *chain);

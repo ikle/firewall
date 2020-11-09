@@ -11,7 +11,7 @@
 
 #include "xtc.h"
 
-struct xt_rule *xt_rule_alloc (int domain);
+struct xt_rule *xt_rule_alloc (struct xtc *xtc);
 void xt_rule_free (struct xt_rule *o);
 
 int xtc_append_rule (struct xtc *o, const char *chain, struct xt_rule *r);

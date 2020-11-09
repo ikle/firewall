@@ -52,6 +52,11 @@ void xtc_free (struct xtc *o)
 	free (o);
 }
 
+int xtc_domain (struct xtc *o)
+{
+	return o->domain;
+}
+
 const char *xtc_error (int domain)
 {
 	switch (domain) {
