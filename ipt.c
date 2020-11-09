@@ -159,7 +159,7 @@ static int set_iface (const char *iface, char *name, unsigned char *mask)
 		plus = *iface == '+';
 	}
 
-	if (!plus)
+	if (!plus && i < size)
 		mask[i] = 1;
 
 	return 1;
