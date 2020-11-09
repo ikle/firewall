@@ -23,4 +23,6 @@ int ipt_rule_set_goto (struct ipt_rule *o, const char *target);
 int ipt_rule_set_in  (struct ipt_rule *o, const char *iface);
 int ipt_rule_set_out (struct ipt_rule *o, const char *iface);
 
+int ipt_rule_comment (struct ipt_rule *o, const char *comment);
+
 #endif  /* NET_IPT_H */
