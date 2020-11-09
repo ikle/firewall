@@ -14,6 +14,7 @@
 #include "ipt.h"
 
 #include <libiptc/libiptc.h>
+#include <libiptc/libip6tc.h>
 
 struct match {
 	struct match *prev;
@@ -44,9 +45,14 @@ static void match_free (struct match *o)
 }
 
 struct xt_rule {
-	struct ipt_entry e;
+	int domain;
 	struct xt_standard_target t;
 	struct match *m;
+
+	union {
+		struct ipt_entry  ipv4;
+		struct ip6t_entry ipv6;
+	};
 };
 
 struct xt_rule *xt_rule_alloc (int domain)
@@ -56,12 +62,29 @@ struct xt_rule *xt_rule_alloc (int domain)
 	if ((o = calloc (1, sizeof (*o))) == NULL)
 		return NULL;
 
+	o->domain = domain;
+
 	o->t.target.u.user.target_size = XT_ALIGN (sizeof (o->t));
 
-	o->e.target_offset = sizeof (o->e);
-	o->e.next_offset = o->e.target_offset + o->t.target.u.user.target_size;
+	switch (domain) {
+	case PF_INET:
+		o->ipv4.target_offset = sizeof (o->ipv4);
+		o->ipv4.next_offset = o->ipv4.target_offset +
+				      o->t.target.u.user.target_size;
+		break;
+	case PF_INET6:
+		o->ipv6.target_offset = sizeof (o->ipv6);
+		o->ipv6.next_offset = o->ipv6.target_offset +
+				      o->t.target.u.user.target_size;
+		break;
+	default:
+		goto no_domain;
+	}
 
 	return o;
+no_domain:
+	free (o);
+	return NULL;
 }
 
 void xt_rule_free (struct xt_rule *o)
@@ -81,8 +104,16 @@ void xt_rule_free (struct xt_rule *o)
 
 static int xt_rule_match (struct xt_rule *o, struct match *m)
 {
-	o->e.target_offset += m->m.u.user.match_size;
-	o->e.next_offset   += m->m.u.user.match_size;
+	switch (o->domain) {
+	case PF_INET:
+		o->ipv4.target_offset += m->m.u.user.match_size;
+		o->ipv4.next_offset   += m->m.u.user.match_size;
+		break;
+	case PF_INET6:
+		o->ipv6.target_offset += m->m.u.user.match_size;
+		o->ipv6.next_offset   += m->m.u.user.match_size;
+		break;
+	}
 
 	m->prev = o->m;
 	o->m = m;
@@ -101,17 +132,18 @@ static size_t match_push (char *to, struct match *m)
 	return offset + m->m.u.user.match_size;
 }
 
-int xtc_append_rule (const char *chain, struct xt_rule *r, struct xtc_handle *o)
+static int
+ipv4_append_rule (const char *chain, struct xt_rule *r, struct xtc_handle *o)
 {
 	char *e;
 	size_t offset;
 	int ok;
 
-	if ((e = calloc (1, r->e.next_offset)) == NULL)
+	if ((e = calloc (1, r->ipv4.next_offset)) == NULL)
 		return 0;
 
-	memcpy (e, &r->e, sizeof (r->e));
-	offset = sizeof (r->e);
+	memcpy (e, &r->ipv4, sizeof (r->ipv4));
+	offset = sizeof (r->ipv4);
 
 	offset += match_push (e + offset, r->m);
 
@@ -120,6 +152,37 @@ int xtc_append_rule (const char *chain, struct xt_rule *r, struct xtc_handle *o)
 	ok = iptc_append_entry (chain, (void *) e, o);
 	free (e);
 	return ok;
+}
+
+static int
+ipv6_append_rule (const char *chain, struct xt_rule *r, struct xtc_handle *o)
+{
+	char *e;
+	size_t offset;
+	int ok;
+
+	if ((e = calloc (1, r->ipv6.next_offset)) == NULL)
+		return 0;
+
+	memcpy (e, &r->ipv6, sizeof (r->ipv6));
+	offset = sizeof (r->ipv6);
+
+	offset += match_push (e + offset, r->m);
+
+	memcpy (e + offset, &r->t, r->t.target.u.user.target_size);
+
+	ok = ip6tc_append_entry (chain, (void *) e, o);
+	free (e);
+	return ok;
+}
+
+int xtc_append_rule (const char *chain, struct xt_rule *r, struct xtc_handle *o)
+{
+	switch (r->domain) {
+	case PF_INET:	return ipv4_append_rule (chain, r, o);
+	case PF_INET6:	return ipv6_append_rule (chain, r, o);
+	default:	return 0;
+	}
 }
 
 int xt_rule_set_jump (struct xt_rule *o, const char *target)
@@ -135,7 +198,10 @@ int xt_rule_set_jump (struct xt_rule *o, const char *target)
 
 int xt_rule_set_goto (struct xt_rule *o, const char *target)
 {
-	o->e.ip.flags |= IPT_F_GOTO;
+	switch (o->domain) {
+	case PF_INET:	o->ipv4.ip.flags   |= IPT_F_GOTO;
+	case PF_INET6:	o->ipv6.ipv6.flags |= IP6T_F_GOTO;
+	}
 
 	return xt_rule_set_jump (o, target);
 }
@@ -168,12 +234,30 @@ static int set_iface (const char *iface, char *name, unsigned char *mask)
 
 int xt_rule_set_in (struct xt_rule *o, const char *iface)
 {
-	return set_iface (iface, o->e.ip.iniface, o->e.ip.iniface_mask);
+	switch (o->domain) {
+	case PF_INET:
+		return set_iface (iface, o->ipv4.ip.iniface,
+					 o->ipv4.ip.iniface_mask);
+	case PF_INET6:
+		return set_iface (iface, o->ipv6.ipv6.iniface,
+					 o->ipv6.ipv6.iniface_mask);
+	}
+
+	return 0;
 }
 
 int xt_rule_set_out (struct xt_rule *o, const char *iface)
 {
-	return set_iface (iface, o->e.ip.outiface, o->e.ip.outiface_mask);
+	switch (o->domain) {
+	case PF_INET:
+		return set_iface (iface, o->ipv4.ip.outiface,
+					 o->ipv4.ip.outiface_mask);
+	case PF_INET6:
+		return set_iface (iface, o->ipv6.ipv6.outiface,
+					 o->ipv6.ipv6.outiface_mask);
+	}
+
+	return 0;
 }
 
 #include <linux/netfilter/xt_comment.h>
