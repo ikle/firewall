@@ -63,7 +63,7 @@ append_default (struct conf *root, const char *chain, const char *zone,
 		struct xtc_handle *o)
 {
 	char action[CHAIN_SIZE + 1];
-	struct ipt_rule *r;
+	struct xt_rule *r;
 	int ok;
 
 	emit ("D: append_default (%s, %s)\n", chain, zone);
@@ -72,15 +72,15 @@ append_default (struct conf *root, const char *chain, const char *zone,
 			 zone, "default-action", NULL))
 		return 1;  /* default: return to main automata */
 
-	if ((r = ipt_rule_alloc ()) == NULL)
+	if ((r = xt_rule_alloc ()) == NULL)
 		return 0;
 
-	if (!(ok = ipt_rule_set_jump (r, trans_action (action))))
+	if (!(ok = xt_rule_set_jump (r, trans_action (action))))
 		emit ("E: Invalid default-action for zone %s\n", zone);
 	else
-		ok = iptc_append_rule (chain, r, o);
+		ok = xtc_append_rule (chain, r, o);
 
-	ipt_rule_free (r);
+	xt_rule_free (r);
 	return ok;
 }
 
@@ -88,15 +88,15 @@ struct policy_ctx {
 	struct xtc_handle *h;
 	const char *zone;
 	const char *chain;
-	struct ipt_rule *rule;
+	struct xt_rule *rule;
 };
 
 static int in_rule_cb (struct conf *root, char *iface, void *cookie)
 {
 	struct policy_ctx *o = cookie;
 
-	ipt_rule_set_in (o->rule, iface);
-	iptc_append_rule (o->chain, o->rule, o->h);
+	xt_rule_set_in (o->rule, iface);
+	xtc_append_rule (o->chain, o->rule, o->h);
 	return 1;
 }
 
@@ -104,8 +104,8 @@ static int out_rule_cb (struct conf *root, char *iface, void *cookie)
 {
 	struct policy_ctx *o = cookie;
 
-	ipt_rule_set_out (o->rule, iface);
-	iptc_append_rule (o->chain, o->rule, o->h);
+	xt_rule_set_out (o->rule, iface);
+	xtc_append_rule (o->chain, o->rule, o->h);
 	return 1;
 }
 
@@ -129,14 +129,14 @@ static int in_policy_cb (struct conf *root, char *peer, void *cookie)
 		return 0;
 	}
 
-	if ((o->rule = ipt_rule_alloc ()) == NULL)
+	if ((o->rule = xt_rule_alloc ()) == NULL)
 		return 0;
 
-	ipt_rule_comment (o->rule, policy);
-	ipt_rule_set_goto (o->rule, target);
+	xt_rule_comment (o->rule, policy);
+	xt_rule_set_goto (o->rule, target);
 	conf_iterate (root, in_rule_cb, o, peer, "interface", NULL);
 
-	ipt_rule_free (o->rule);
+	xt_rule_free (o->rule);
 	return 1;
 }
 
@@ -160,14 +160,14 @@ static int out_policy_cb (struct conf *root, char *peer, void *cookie)
 		return 0;
 	}
 
-	if ((o->rule = ipt_rule_alloc ()) == NULL)
+	if ((o->rule = xt_rule_alloc ()) == NULL)
 		return 0;
 
-	ipt_rule_comment (o->rule, policy);
-	ipt_rule_set_goto (o->rule, target);
+	xt_rule_comment (o->rule, policy);
+	xt_rule_set_goto (o->rule, target);
 	conf_iterate (root, out_rule_cb, o, peer, "interface", NULL);
 
-	ipt_rule_free (o->rule);
+	xt_rule_free (o->rule);
 	return 1;
 }
 
@@ -197,13 +197,13 @@ connect_transit (struct conf *root, const char *zone, struct xtc_handle *o)
 	if (!get_zone_chain (zone, target))
 		return 0;
 
-	if ((p.rule = ipt_rule_alloc ()) == NULL)
+	if ((p.rule = xt_rule_alloc ()) == NULL)
 		return 0;
 
-	ipt_rule_set_goto (p.rule, target);
+	xt_rule_set_goto (p.rule, target);
 	conf_iterate (root, out_rule_cb, &p, zone, "interface", NULL);
 
-	ipt_rule_free (p.rule);
+	xt_rule_free (p.rule);
 	return 1;
 }
 
@@ -211,18 +211,18 @@ static int
 connect_local_in (struct conf *root, const char *zone, struct xtc_handle *o)
 {
 	char target[CHAIN_SIZE];
-	struct ipt_rule *r;
+	struct xt_rule *r;
 	int ok;
 
 	emit ("D: connect_local_in (%s)\n", zone);
 
-	if (!get_zone_chain (zone, target) || (r = ipt_rule_alloc ()) == NULL)
+	if (!get_zone_chain (zone, target) || (r = xt_rule_alloc ()) == NULL)
 		return 0;
 
-	ipt_rule_set_goto (r, target);
-	ok = iptc_append_rule (local_in, r, o);
+	xt_rule_set_goto (r, target);
+	ok = xtc_append_rule (local_in, r, o);
 
-	ipt_rule_free (r);
+	xt_rule_free (r);
 	return ok;
 }
 

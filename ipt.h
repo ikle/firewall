@@ -11,18 +11,18 @@
 
 struct xtc_handle;
 
-struct ipt_rule *ipt_rule_alloc (void);
-void ipt_rule_free (struct ipt_rule *o);
+struct xt_rule *xt_rule_alloc (void);
+void xt_rule_free (struct xt_rule *o);
 
-int iptc_append_rule (const char *chain, struct ipt_rule *r,
-		      struct xtc_handle *o);
+int xtc_append_rule (const char *chain, struct xt_rule *r,
+		     struct xtc_handle *o);
 
-int ipt_rule_set_jump (struct ipt_rule *o, const char *target);
-int ipt_rule_set_goto (struct ipt_rule *o, const char *target);
+int xt_rule_set_jump (struct xt_rule *o, const char *target);
+int xt_rule_set_goto (struct xt_rule *o, const char *target);
 
-int ipt_rule_set_in  (struct ipt_rule *o, const char *iface);
-int ipt_rule_set_out (struct ipt_rule *o, const char *iface);
+int xt_rule_set_in  (struct xt_rule *o, const char *iface);
+int xt_rule_set_out (struct xt_rule *o, const char *iface);
 
-int ipt_rule_comment (struct ipt_rule *o, const char *comment);
+int xt_rule_comment (struct xt_rule *o, const char *comment);
 
 #endif  /* NET_IPT_H */

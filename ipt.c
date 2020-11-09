@@ -43,15 +43,15 @@ static void match_free (struct match *o)
 	free (o);
 }
 
-struct ipt_rule {
+struct xt_rule {
 	struct ipt_entry e;
 	struct xt_standard_target t;
 	struct match *m;
 };
 
-struct ipt_rule *ipt_rule_alloc (void)
+struct xt_rule *xt_rule_alloc (void)
 {
-	struct ipt_rule *o;
+	struct xt_rule *o;
 
 	if ((o = calloc (1, sizeof (*o))) == NULL)
 		return NULL;
@@ -64,7 +64,7 @@ struct ipt_rule *ipt_rule_alloc (void)
 	return o;
 }
 
-void ipt_rule_free (struct ipt_rule *o)
+void xt_rule_free (struct xt_rule *o)
 {
 	struct match *p, *prev;
 
@@ -79,7 +79,7 @@ void ipt_rule_free (struct ipt_rule *o)
 	free (o);
 }
 
-static int ipt_rule_match (struct ipt_rule *o, struct match *m)
+static int xt_rule_match (struct xt_rule *o, struct match *m)
 {
 	o->e.target_offset += m->m.u.user.match_size;
 	o->e.next_offset   += m->m.u.user.match_size;
@@ -101,8 +101,7 @@ static size_t match_push (char *to, struct match *m)
 	return offset + m->m.u.user.match_size;
 }
 
-int
-iptc_append_rule (const char *chain, struct ipt_rule *r, struct xtc_handle *o)
+int xtc_append_rule (const char *chain, struct xt_rule *r, struct xtc_handle *o)
 {
 	char *e;
 	size_t offset;
@@ -123,7 +122,7 @@ iptc_append_rule (const char *chain, struct ipt_rule *r, struct xtc_handle *o)
 	return ok;
 }
 
-int ipt_rule_set_jump (struct ipt_rule *o, const char *target)
+int xt_rule_set_jump (struct xt_rule *o, const char *target)
 {
 	if (strlen (target) >= sizeof (o->t.target.u.user.name)) {
 		errno = EINVAL;
@@ -134,11 +133,11 @@ int ipt_rule_set_jump (struct ipt_rule *o, const char *target)
 	return 1;
 }
 
-int ipt_rule_set_goto (struct ipt_rule *o, const char *target)
+int xt_rule_set_goto (struct xt_rule *o, const char *target)
 {
 	o->e.ip.flags |= IPT_F_GOTO;
 
-	return ipt_rule_set_jump (o, target);
+	return xt_rule_set_jump (o, target);
 }
 
 static int set_iface (const char *iface, char *name, unsigned char *mask)
@@ -167,19 +166,19 @@ static int set_iface (const char *iface, char *name, unsigned char *mask)
 	return 1;
 }
 
-int ipt_rule_set_in (struct ipt_rule *o, const char *iface)
+int xt_rule_set_in (struct xt_rule *o, const char *iface)
 {
 	return set_iface (iface, o->e.ip.iniface, o->e.ip.iniface_mask);
 }
 
-int ipt_rule_set_out (struct ipt_rule *o, const char *iface)
+int xt_rule_set_out (struct xt_rule *o, const char *iface)
 {
 	return set_iface (iface, o->e.ip.outiface, o->e.ip.outiface_mask);
 }
 
 #include <linux/netfilter/xt_comment.h>
 
-int ipt_rule_comment (struct ipt_rule *o, const char *comment)
+int xt_rule_comment (struct xt_rule *o, const char *comment)
 {
 	size_t size = sizeof (struct xt_comment_info);
 	struct match *m;
@@ -193,5 +192,5 @@ int ipt_rule_comment (struct ipt_rule *o, const char *comment)
 		return 0;
 
 	strcpy ((void *) m->m.data, comment);
-	return ipt_rule_match (o, m);
+	return xt_rule_match (o, m);
 }

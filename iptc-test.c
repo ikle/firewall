@@ -16,7 +16,7 @@
 static int test (struct xtc_handle *o, const char *chain)
 {
 	const char *policy = "policy-0";
-	struct ipt_rule *r;
+	struct xt_rule *r;
 	int ok;
 
 	if (!iptc_is_chain (policy, o) && !iptc_create_chain (policy, o))
@@ -28,14 +28,14 @@ static int test (struct xtc_handle *o, const char *chain)
 	if (!iptc_flush_entries (chain, o))
 		return 0;
 
-	if ((r = ipt_rule_alloc ()) == NULL)
+	if ((r = xt_rule_alloc ()) == NULL)
 		return 0;
 
-	ipt_rule_set_in   (r, "eth2");
-	ipt_rule_set_goto (r, policy);
+	xt_rule_set_in   (r, "eth2");
+	xt_rule_set_goto (r, policy);
 
-	ok = iptc_append_rule (chain, r, o);
-	ipt_rule_free (r);
+	ok = xtc_append_rule (chain, r, o);
+	xt_rule_free (r);
 
 	return ok && iptc_commit (o);
 }
