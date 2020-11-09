@@ -116,10 +116,10 @@ static int in_policy_cb (struct conf *root, char *peer, void *cookie)
 			 o->zone, "from", peer, "policy", type, NULL))
 		return 1;
 
+	emit ("D: %s from %s policy %s %s\n", o->zone, peer, type, policy);
+
 	if (!get_policy_chain (policy, target))
 		return 0;
-
-	emit ("D: %s from %s policy %s %s\n", o->zone, peer, type, policy);
 
 	if (!iptc_is_chain (target, o->h)) {
 		emit ("E: Policy %s %s does not exists\n", type, policy);
@@ -141,10 +141,10 @@ static int out_policy_cb (struct conf *root, char *peer, void *cookie)
 			 peer, "from", o->zone, "policy", type, NULL))
 		return 1;
 
+	emit ("D: %s from %s policy %s %s\n", o->zone, peer, type, policy);
+
 	if (!get_policy_chain (policy, target))
 		return 0;
-
-	emit ("D: %s from %s policy %s %s\n", o->zone, peer, type, policy);
 
 	if (!iptc_is_chain (target, o->h)) {
 		emit ("E: Policy %s %s does not exists\n", type, policy);
