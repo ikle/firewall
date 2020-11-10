@@ -312,6 +312,9 @@ static int zone_init (struct xtc *o, const char *type)
 	     conf_iterate (root, zone_policy_cb, &p, NULL) &&
 	     xtc_commit (o);
 
+	if (!ok)
+		emit ("E: %s: %s\n", type, xtc_error (xtc_domain (o)));
+
 	conf_free (root);
 	return ok;
 }
@@ -332,17 +335,25 @@ struct zone_state {
  */
 int zone_enter (struct zone_state *o)
 {
-	if ((o->filter_ipv4 = xtc_alloc (PF_INET,  "filter")) == NULL)
+	if ((o->filter_ipv4 = xtc_alloc (PF_INET,  "filter")) == NULL) {
+		emit ("E: IPv4 filter: %s\n", xtc_error (PF_INET));
 		goto no_filter_ipv4;
+	}
 
-	if ((o->filter_ipv6 = xtc_alloc (PF_INET6, "filter")) == NULL)
+	if ((o->filter_ipv6 = xtc_alloc (PF_INET6, "filter")) == NULL) {
+		emit ("E: IPv6 filter: %s\n", xtc_error (PF_INET6));
 		goto no_filter_ipv6;
+	}
 
-	if ((o->mangle_ipv4 = xtc_alloc (PF_INET,  "mangle")) == NULL)
+	if ((o->mangle_ipv4 = xtc_alloc (PF_INET,  "mangle")) == NULL) {
+		emit ("E: IPv4 mangle: %s\n", xtc_error (PF_INET));
 		goto no_mangle_ipv4;
+	}
 
-	if ((o->mangle_ipv6 = xtc_alloc (PF_INET6, "mangle")) == NULL)
+	if ((o->mangle_ipv6 = xtc_alloc (PF_INET6, "mangle")) == NULL) {
+		emit ("E: IPv4 mangle: %s\n", xtc_error (PF_INET6));
 		goto no_mangle_ipv6;
+	}
 
 	zone_fini (o->filter_ipv4);
 	zone_fini (o->filter_ipv6);
@@ -373,12 +384,15 @@ int zone_compile (struct zone_state *o)
 		zone_init (o->mangle_ipv6, "modify-ipv6");
 }
 
-static int xtc_final (struct xtc *o)
+static int xtc_final (struct xtc *o, const char *type)
 {
 	int ok;
 
 	while (!(ok = xtc_commit (o)) && errno == EAGAIN)
 		sleep (1);
+
+	if (!ok)
+		emit ("E: %s: %s\n", type, xtc_error (xtc_domain (o)));
 
 	xtc_free (o);
 	return ok;
@@ -391,10 +405,10 @@ int zone_leave (struct zone_state *o)
 {
 	int ok = 0;
 
-	ok |= xtc_final (o->filter_ipv4);
-	ok |= xtc_final (o->filter_ipv6);
-	ok |= xtc_final (o->mangle_ipv4);
-	ok |= xtc_final (o->mangle_ipv6);
+	ok |= xtc_final (o->filter_ipv4, "firewall");
+	ok |= xtc_final (o->filter_ipv6, "firewall-ipv6");
+	ok |= xtc_final (o->mangle_ipv4, "clone/modify");
+	ok |= xtc_final (o->mangle_ipv6, "clone/modify-ipv6");
 
 	return ok;
 }
@@ -417,11 +431,5 @@ int main (int argc, char *argv[])
 	}
 
 	ok = zone_enter (&s) && zone_compile (&s) && zone_leave (&s);
-
-	if (!ok) {
-		emit ("E: %s\n", xtc_error (PF_INET));
-		return 1;
-	}
-
-	return 0;
+	return ok ? 0: 1;
 }
