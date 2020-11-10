@@ -237,7 +237,10 @@ static int connect_local_out (struct conf *root, struct policy_ctx *o)
 		append_default (root, o);
 }
 
-void zone_fini (struct xtc *o)
+/*
+ * Clean up zones
+ */
+static void zone_fini (struct xtc *o)
 {
 	const char *chain;
 
@@ -279,7 +282,10 @@ static int zone_policy_cb (struct conf *root, char *zone, void *cookie)
 		connect_transit (root, o);
 }
 
-int zone_init (struct xtc *o, const char *type)
+/*
+ * Initialize zones
+ */
+static int zone_init (struct xtc *o, const char *type)
 {
 	struct conf *root;
 	struct policy_ctx p = {o, type};
@@ -298,32 +304,91 @@ int zone_init (struct xtc *o, const char *type)
 	return ok;
 }
 
-int zone_update (const char *type)
+/*
+ * Top-Level Logic State
+ */
+struct zone_state {
+	struct xtc *filter_ipv4;
+	struct xtc *filter_ipv6;
+
+	struct xtc *mangle_ipv4;
+	struct xtc *mangle_ipv6;
+};
+
+/*
+ * Open connection for all protocols and tables
+ */
+int zone_enter (struct zone_state *o)
 {
-	int domain = PF_INET;
-	const char *table = "filter", *p;
-	struct xtc *o;
-	int ok;
+	if ((o->filter_ipv4 = xtc_alloc (PF_INET,  "filter")) == NULL)
+		goto no_filter_ipv4;
 
-	if ((p = strrchr (type, '-')) != NULL && strcmp (p, "-ipv6") == 0)
-		domain = PF_INET6;
+	if ((o->filter_ipv6 = xtc_alloc (PF_INET6, "filter")) == NULL)
+		goto no_filter_ipv6;
 
-	if (strncmp (type, "firewall", 8) != 0)
-		table = "mangle";
+	if ((o->mangle_ipv4 = xtc_alloc (PF_INET,  "mangle")) == NULL)
+		goto no_mangle_ipv4;
 
-	if ((o = xtc_alloc (domain, table)) == NULL)
-		return 0;
+	if ((o->mangle_ipv6 = xtc_alloc (PF_INET6, "mangle")) == NULL)
+		goto no_mangle_ipv6;
 
-	zone_fini (o);
-	ok = zone_init (o, type);
+	zone_fini (o->filter_ipv4);
+	zone_fini (o->filter_ipv6);
+	zone_fini (o->mangle_ipv4);
+	zone_fini (o->mangle_ipv6);
+
+	return 1;
+no_mangle_ipv6:
+	xtc_free (o->mangle_ipv4);
+no_mangle_ipv4:
+	xtc_free (o->filter_ipv6);
+no_filter_ipv6:
+	xtc_free (o->filter_ipv4);
+no_filter_ipv4:
+	return 0;
+}
+
+/*
+ * Compile zone rules
+ */
+int zone_compile (struct zone_state *o)
+{
+	return	zone_init (o->filter_ipv4, "firewall")		&&
+		zone_init (o->filter_ipv6, "firewall-ipv6")	&&
+		zone_init (o->mangle_ipv4, "clone")		&&
+		zone_init (o->mangle_ipv6, "clone-ipv6")	&&
+		zone_init (o->mangle_ipv4, "modify")		&&
+		zone_init (o->mangle_ipv6, "modify-ipv6");
+}
+
+static int xtc_final (struct xtc *o)
+{
+	int ok = xtc_commit (o);
 
 	xtc_free (o);
+	return ok;
+}
+
+/*
+ * Commit all changes and return cumulative status
+ */
+int zone_leave (struct zone_state *o)
+{
+	int ok = 0;
+
+	ok |= xtc_final (o->filter_ipv4);
+	ok |= xtc_final (o->filter_ipv6);
+	ok |= xtc_final (o->mangle_ipv4);
+	ok |= xtc_final (o->mangle_ipv6);
+
 	return ok;
 }
 
 int main (int argc, char *argv[])
 {
 	size_t i;
+	struct zone_state s;
+	int ok;
 
 	for (; argc > 1 && argv[1][0] == '-'; --argc, ++argv)
 		for (i = 1; argv[1][i] != '\0'; ++i)
@@ -331,14 +396,14 @@ int main (int argc, char *argv[])
 			case 'v':	++verbose; break;
 			}
 
-	if (argc != 2) {
-		emit ("usage:\n"
-		      "\tzone-compile [-v] firewall\n"
-		      "\tzone-compile [-v] firewall-ipv6\n");
+	if (argc != 1) {
+		emit ("usage:\n\tzone-compile [-v]\n");
 		return 1;
 	}
 
-	if (!zone_update (argv[1])) {
+	ok = zone_enter (&s) && zone_compile (&s) && zone_leave (&s);
+
+	if (!ok) {
 		emit ("E: %s\n", xtc_error (PF_INET));
 		return 1;
 	}
