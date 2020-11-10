@@ -7,27 +7,50 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include <unistd.h>
 
 #include <libiptc/libiptc.h>
 
-static int ipt_replace (struct ipt_replace *o, size_t size)
+static int ipt_replace (const char *table, struct ipt_replace *o, size_t size)
 {
 	int s;
+	struct ipt_getinfo info;
+	socklen_t len = sizeof (info);
+	struct xt_counters *c;
 
 	if ((s = socket (AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
 		perror ("socket");
 		return 0;
 	}
 
+	strcpy (info.name, table);
+
+	if (getsockopt (s, IPPROTO_IP, IPT_SO_GET_INFO, &info, &len) < 0)
+		goto no_info;
+
+	if ((c = malloc (sizeof (c[0]) * info.num_entries)) == NULL)
+		goto no_counters;
+
+	strcpy (o->name, table);
+
+	o->num_counters = info.num_entries;
+	o->counters	= c;
+
 	if (setsockopt (s, IPPROTO_IP, IPT_SO_SET_REPLACE, o, size) < 0) {
 		perror ("ipt replace");
 		goto no_replace;
 	}
 
+	free (c);
 	close (s);
 	return 1;
 no_replace:
+	free (c);
+no_counters:
+no_info:
 	close (s);
 	return 0;
 }
@@ -56,11 +79,8 @@ struct null_filter {
 	struct chain_entry end;
 };
 
-static struct xt_counters null_counters[3];
-
 static struct null_filter null_filter = {
 	.head	= {
-		.name		= "filter",
 		.valid_hooks	= 0x0e,
 		.num_entries	= 4,
 		.size		= 3 * HE_SIZE + CE_SIZE,
@@ -74,8 +94,6 @@ static struct null_filter null_filter = {
 			[NF_IP_FORWARD]		= 1 * HE_SIZE,
 			[NF_IP_LOCAL_OUT]	= 2 * HE_SIZE,
 		},
-		.num_counters	= 3,
-		.counters	= null_counters,
 	},
 	.hooks	= {
 		{
@@ -111,6 +129,7 @@ static struct null_filter null_filter = {
 
 int main (int argc, char *argv[])
 {
-	return ipt_replace (&null_filter.head, sizeof (null_filter)) ? 0 : 1;
+	return ipt_replace ("filter",
+			    &null_filter.head, sizeof (null_filter)) ? 0 : 1;
 
 }
