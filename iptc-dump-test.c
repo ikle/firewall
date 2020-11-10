@@ -202,18 +202,36 @@ static int dump_entry (struct ipt_entry *e, struct ipt_get_entries *entries)
 	return 0;
 }
 
+static int dump_image (const struct ipt_get_entries *entries, const char *image)
+{
+	FILE *f;
+	int ok;
+
+	if ((f = fopen (image, "wb")) == NULL)
+		return 0;
+
+	ok = fwrite (entries->entrytable, entries->size, 1, f) == 1;
+
+	return fclose (f) == 0 && ok;
+}
+
 int main (int argc, char *argv[])
 {
 	char *table = argc > 1 ? argv[1] : "filter";
 	struct ipt_get_entries *entries;
+	int ok;
 
 	if ((entries = ipt_get_entries (table)) == NULL) {
 		perror ("iptc-dump");
 		return 1;
 	}
 
-	IPT_ENTRY_ITERATE (entries->entrytable, entries->size,
-			   dump_entry, entries);
+	if (argc < 3)
+		ok = IPT_ENTRY_ITERATE (entries->entrytable, entries->size,
+					dump_entry, entries) == 0;
+	else
+		ok = dump_image (entries, argv[2]);
+
 	free (entries);
-	return 0;
+	return ok ? 0 : 1;
 }
