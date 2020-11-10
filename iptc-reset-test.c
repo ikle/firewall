@@ -62,21 +62,17 @@ static struct null_filter null_filter = {
 	.head	= {
 		.name		= "filter",
 		.valid_hooks	= 0x0e,
-		.num_entries	= 3,
+		.num_entries	= 4,
 		.size		= 3 * HE_SIZE + CE_SIZE,
 		.hook_entry	= {
-			[NF_IP_PRE_ROUTING]	= -1,
 			[NF_IP_LOCAL_IN]	= 0 * HE_SIZE,
 			[NF_IP_FORWARD]		= 1 * HE_SIZE,
 			[NF_IP_LOCAL_OUT]	= 2 * HE_SIZE,
-			[NF_IP_POST_ROUTING]	= -1,
 		},
 		.underflow	= {
-			[NF_IP_PRE_ROUTING]	= -1,
 			[NF_IP_LOCAL_IN]	= 0 * HE_SIZE,
 			[NF_IP_FORWARD]		= 1 * HE_SIZE,
 			[NF_IP_LOCAL_OUT]	= 2 * HE_SIZE,
-			[NF_IP_POST_ROUTING]	= -1,
 		},
 		.num_counters	= 3,
 		.counters	= null_counters,
@@ -107,7 +103,7 @@ static struct null_filter null_filter = {
 	.end	= {
 		.e.target_offset		= CE_OFFSET,
 		.e.next_offset			= CE_SIZE,
-		.t.target.u.target_size		= CT_SIZE,
+		.t.target.u.user.target_size	= CT_SIZE,
 		.t.target.u.user.name		= XT_ERROR_TARGET,
 		.t.errorname			= "ERROR",
 	},
