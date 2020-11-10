@@ -11,6 +11,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <unistd.h>
+
 #include "chain-hash.h"
 #include "conf.h"
 #include "xt-rule.h"
@@ -373,7 +375,10 @@ int zone_compile (struct zone_state *o)
 
 static int xtc_final (struct xtc *o)
 {
-	int ok = xtc_commit (o);
+	int ok;
+
+	while (!(ok = xtc_commit (o)) && errno == EAGAIN)
+		sleep (1);
 
 	xtc_free (o);
 	return ok;
