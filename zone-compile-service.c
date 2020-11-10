@@ -309,8 +309,7 @@ static int zone_init (struct xtc *o, const char *type)
 		return 0;
 
 	ok = conf_iterate (root, zone_chain_cb,  &p, NULL) &&
-	     conf_iterate (root, zone_policy_cb, &p, NULL) &&
-	     xtc_commit (o);
+	     conf_iterate (root, zone_policy_cb, &p, NULL);
 
 	if (!ok)
 		emit ("E: %s: %s\n", type, xtc_error (xtc_domain (o)));
