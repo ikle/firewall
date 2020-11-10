@@ -85,21 +85,21 @@ static struct null_filter null_filter = {
 		{
 			.e.target_offset	= HE_OFFSET,
 			.e.next_offset		= HE_SIZE,
-//			.e.comefrom		= NF_IP_LOCAL_IN,
+			.e.comefrom		= 1 << NF_IP_LOCAL_IN,
 			.t.target.u.target_size	= HT_SIZE,
 			.t.verdict		= -NF_ACCEPT - 1,
 		},
 		{
 			.e.target_offset	= HE_OFFSET,
 			.e.next_offset		= HE_SIZE,
-//			.e.comefrom		= NF_IP_FORWARD,
+			.e.comefrom		= 1 << NF_IP_FORWARD,
 			.t.target.u.target_size	= HT_SIZE,
 			.t.verdict		= -NF_ACCEPT - 1,
 		},
 		{
 			.e.target_offset	= HE_OFFSET,
 			.e.next_offset		= HE_SIZE,
-//			.e.comefrom		= NF_IP_LOCAL_OUT,
+			.e.comefrom		= 1 << NF_IP_LOCAL_OUT,
 			.t.target.u.target_size	= HT_SIZE,
 			.t.verdict		= -NF_ACCEPT - 1,
 		},
@@ -116,4 +116,5 @@ static struct null_filter null_filter = {
 int main (int argc, char *argv[])
 {
 	return ipt_replace (&null_filter.head, sizeof (null_filter)) ? 0 : 1;
+
 }
