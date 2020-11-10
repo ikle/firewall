@@ -177,7 +177,10 @@ static int create_zone_chain (struct conf *root, struct policy_ctx *o)
 
 	emit ("D: create_zone_chain (%s)\n", o->zone);
 
-	if (!get_zone_chain (o->zone, chain) || !xtc_create_chain (o->h, chain))
+	if (!get_zone_chain (o->zone, chain))
+		return 0;
+
+	if (!xtc_is_chain (o->h, chain) && !xtc_create_chain (o->h, chain))
 		return 0;
 
 	return	conf_iterate (root, in_policy_cb, o, o->zone, "from", NULL) &&
