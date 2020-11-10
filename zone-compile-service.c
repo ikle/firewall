@@ -60,6 +60,7 @@ struct policy_ctx {
 	const char *zone;
 	const char *chain;
 	struct xt_rule *rule;
+	int linked;		/* untyped links exists */
 };
 
 static int append_default (struct conf *root, struct  policy_ctx *o)
@@ -180,7 +181,10 @@ static int create_zone_chain (struct conf *root, struct policy_ctx *o)
 	if (!get_zone_chain (o->zone, chain))
 		return 0;
 
-	if (!xtc_is_chain (o->h, chain) && !xtc_create_chain (o->h, chain))
+	if ((o->linked = xtc_is_chain (o->h, chain)))
+		return 1;  /* untyped links exists already */
+
+	if (!xtc_create_chain (o->h, chain))
 		return 0;
 
 	return	conf_iterate (root, in_policy_cb, o, o->zone, "from", NULL) &&
@@ -194,6 +198,9 @@ static int connect_transit (struct conf *root, struct policy_ctx *o)
 	o->chain = forward;
 
 	emit ("D: connect_transit (%s)\n", o->zone);
+
+	if (o->linked)
+		return 1;  /* untyped links exists already */
 
 	if (!get_zone_chain (o->zone, target))
 		return 0;
@@ -215,6 +222,9 @@ static int connect_local_in (struct conf *root, struct policy_ctx *o)
 	int ok;
 
 	emit ("D: connect_local_in (%s)\n", o->zone);
+
+	if (o->linked)
+		return 1;  /* untyped links exists already */
 
 	if (!get_zone_chain (o->zone, target) ||
 	    (r = xt_rule_alloc (o->h)) == NULL)
