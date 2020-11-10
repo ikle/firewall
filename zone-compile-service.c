@@ -291,7 +291,7 @@ static int zone_init (struct xtc *o, const char *type)
 	struct policy_ctx p = {o, type};
 	int ok;
 
-	emit ("D: zone_init ()\n");
+	emit ("D: zone_init (%s)\n", type);
 
 	if ((root = conf_clone (NULL, "zone-policy", "zone", NULL)) == NULL)
 		return 0;
