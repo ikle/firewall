@@ -9,7 +9,12 @@
 #ifndef NET_XTC_H
 #define NET_XTC_H  1
 
-#include <netinet/in.h>
+enum xtc_domain {
+	XTC_INET,
+	XTC_INET6,
+	XTC_ARP,
+	XTC_ETHERNET,
+};
 
 struct xtc *xtc_alloc (int domain, const char *table);
 void xtc_free (struct xtc *o);

@@ -334,23 +334,23 @@ struct zone_state {
  */
 int zone_enter (struct zone_state *o)
 {
-	if ((o->filter_ipv4 = xtc_alloc (PF_INET,  "filter")) == NULL) {
-		emit ("E: IPv4 filter: %s\n", xtc_error (PF_INET));
+	if ((o->filter_ipv4 = xtc_alloc (XTC_INET,  "filter")) == NULL) {
+		emit ("E: IPv4 filter: %s\n", xtc_error (XTC_INET));
 		goto no_filter_ipv4;
 	}
 
-	if ((o->filter_ipv6 = xtc_alloc (PF_INET6, "filter")) == NULL) {
-		emit ("E: IPv6 filter: %s\n", xtc_error (PF_INET6));
+	if ((o->filter_ipv6 = xtc_alloc (XTC_INET6, "filter")) == NULL) {
+		emit ("E: IPv6 filter: %s\n", xtc_error (XTC_INET6));
 		goto no_filter_ipv6;
 	}
 
-	if ((o->mangle_ipv4 = xtc_alloc (PF_INET,  "mangle")) == NULL) {
-		emit ("E: IPv4 mangle: %s\n", xtc_error (PF_INET));
+	if ((o->mangle_ipv4 = xtc_alloc (XTC_INET,  "mangle")) == NULL) {
+		emit ("E: IPv4 mangle: %s\n", xtc_error (XTC_INET));
 		goto no_mangle_ipv4;
 	}
 
-	if ((o->mangle_ipv6 = xtc_alloc (PF_INET6, "mangle")) == NULL) {
-		emit ("E: IPv4 mangle: %s\n", xtc_error (PF_INET6));
+	if ((o->mangle_ipv6 = xtc_alloc (XTC_INET6, "mangle")) == NULL) {
+		emit ("E: IPv4 mangle: %s\n", xtc_error (XTC_INET6));
 		goto no_mangle_ipv6;
 	}
 

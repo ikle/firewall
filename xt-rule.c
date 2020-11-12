@@ -67,12 +67,12 @@ struct xt_rule *xt_rule_alloc (struct xtc *xtc)
 	o->t.target.u.user.target_size = XT_ALIGN (sizeof (o->t));
 
 	switch (o->domain) {
-	case PF_INET:
+	case XTC_INET:
 		o->ipv4.target_offset = sizeof (o->ipv4);
 		o->ipv4.next_offset = o->ipv4.target_offset +
 				      o->t.target.u.user.target_size;
 		break;
-	case PF_INET6:
+	case XTC_INET6:
 		o->ipv6.target_offset = sizeof (o->ipv6);
 		o->ipv6.next_offset = o->ipv6.target_offset +
 				      o->t.target.u.user.target_size;
@@ -105,11 +105,11 @@ void xt_rule_free (struct xt_rule *o)
 static int xt_rule_match (struct xt_rule *o, struct match *m)
 {
 	switch (o->domain) {
-	case PF_INET:
+	case XTC_INET:
 		o->ipv4.target_offset += m->m.u.user.match_size;
 		o->ipv4.next_offset   += m->m.u.user.match_size;
 		break;
-	case PF_INET6:
+	case XTC_INET6:
 		o->ipv6.target_offset += m->m.u.user.match_size;
 		o->ipv6.next_offset   += m->m.u.user.match_size;
 		break;
@@ -172,8 +172,8 @@ int xtc_append_rule (struct xtc *o, const char *chain, struct xt_rule *r)
 	int ok;
 
 	switch (r->domain) {
-	case PF_INET:	e = ipv4_make_entry (r); break;
-	case PF_INET6:	e = ipv6_make_entry (r); break;
+	case XTC_INET:	e = ipv4_make_entry (r); break;
+	case XTC_INET6:	e = ipv6_make_entry (r); break;
 	default:	return 0;
 	}
 
@@ -199,8 +199,8 @@ int xt_rule_set_jump (struct xt_rule *o, const char *target)
 int xt_rule_set_goto (struct xt_rule *o, const char *target)
 {
 	switch (o->domain) {
-	case PF_INET:	o->ipv4.ip.flags   |= IPT_F_GOTO;
-	case PF_INET6:	o->ipv6.ipv6.flags |= IP6T_F_GOTO;
+	case XTC_INET:	o->ipv4.ip.flags   |= IPT_F_GOTO;
+	case XTC_INET6:	o->ipv6.ipv6.flags |= IP6T_F_GOTO;
 	}
 
 	return xt_rule_set_jump (o, target);
@@ -235,10 +235,10 @@ static int set_iface (const char *iface, char *name, unsigned char *mask)
 int xt_rule_set_in (struct xt_rule *o, const char *iface)
 {
 	switch (o->domain) {
-	case PF_INET:
+	case XTC_INET:
 		return set_iface (iface, o->ipv4.ip.iniface,
 					 o->ipv4.ip.iniface_mask);
-	case PF_INET6:
+	case XTC_INET6:
 		return set_iface (iface, o->ipv6.ipv6.iniface,
 					 o->ipv6.ipv6.iniface_mask);
 	}
@@ -249,10 +249,10 @@ int xt_rule_set_in (struct xt_rule *o, const char *iface)
 int xt_rule_set_out (struct xt_rule *o, const char *iface)
 {
 	switch (o->domain) {
-	case PF_INET:
+	case XTC_INET:
 		return set_iface (iface, o->ipv4.ip.outiface,
 					 o->ipv4.ip.outiface_mask);
-	case PF_INET6:
+	case XTC_INET6:
 		return set_iface (iface, o->ipv6.ipv6.outiface,
 					 o->ipv6.ipv6.outiface_mask);
 	}

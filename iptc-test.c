@@ -47,8 +47,8 @@ int main (int argc, char *argv[])
 	const struct ipt_entry *e;
 	const char *target;
 
-	if ((o = xtc_alloc (PF_INET, "filter")) == NULL) {
-		fprintf (stderr, "E: %s\n", xtc_error (PF_INET));
+	if ((o = xtc_alloc (XTC_INET, "filter")) == NULL) {
+		fprintf (stderr, "E: %s\n", xtc_error (XTC_INET));
 		return 1;
 	}
 
@@ -82,7 +82,7 @@ int main (int argc, char *argv[])
 	}
 
 	if (!test (o, "test"))
-		fprintf (stderr, "E: %s\n", xtc_error (PF_INET));
+		fprintf (stderr, "E: %s\n", xtc_error (XTC_INET));
 
 //	dump_entries (o);
 	xtc_free (o);
