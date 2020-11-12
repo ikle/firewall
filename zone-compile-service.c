@@ -37,7 +37,7 @@ static void emit (const char *fmt, ...)
 	va_end (ap);
 }
 
-#define CHAIN_SIZE  (XT_EXTENSION_MAXNAMELEN)
+#define CHAIN_SIZE  29  /* XT_EXTENSION_MAXNAMELEN */
 
 static int get_zone_chain (const char *zone, char *chain)
 {

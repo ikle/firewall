@@ -11,8 +11,6 @@
 
 #include <netinet/in.h>
 
-#include <linux/netfilter/x_tables.h>
-
 struct xtc *xtc_alloc (int domain, const char *table);
 void xtc_free (struct xtc *o);
 
