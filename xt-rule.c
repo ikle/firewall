@@ -166,18 +166,21 @@ static void *ipv6_make_entry (struct xt_rule *o)
 	return e;
 }
 
+void *xt_rule_make_entry (struct xt_rule *o)
+{
+	switch (o->domain) {
+	case XTC_INET:	return ipv4_make_entry (o); break;
+	case XTC_INET6:	return ipv6_make_entry (o); break;
+	default:	return NULL;
+	}
+}
+
 int xtc_append_rule (struct xtc *o, const char *chain, struct xt_rule *r)
 {
 	void *e;
 	int ok;
 
-	switch (r->domain) {
-	case XTC_INET:	e = ipv4_make_entry (r); break;
-	case XTC_INET6:	e = ipv6_make_entry (r); break;
-	default:	return 0;
-	}
-
-	if (e == NULL)
+	if ((e = xt_rule_make_entry (r)) == NULL)
 		return 0;
 
 	ok = xtc_append_entry (o, chain, e);

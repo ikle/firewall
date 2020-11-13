@@ -14,6 +14,8 @@
 struct xt_rule *xt_rule_alloc (struct xtc *xtc);
 void xt_rule_free (struct xt_rule *o);
 
+void *xt_rule_make_entry (struct xt_rule *o);
+
 int xtc_append_rule (struct xtc *o, const char *chain, struct xt_rule *r);
 
 int xt_rule_set_jump (struct xt_rule *o, const char *target);
