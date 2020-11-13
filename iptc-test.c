@@ -8,6 +8,7 @@
 
 #include <errno.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include <libiptc/libiptc.h>
 
@@ -17,6 +18,7 @@ static int test (struct xtc *o, const char *chain)
 {
 	const char *policy = "policy-0";
 	struct xt_rule *r;
+	void *e;
 	int ok;
 
 	if (!xtc_is_chain (o, policy) && !xtc_create_chain (o, policy))
@@ -34,8 +36,14 @@ static int test (struct xtc *o, const char *chain)
 	xt_rule_set_in   (r, "eth2");
 	xt_rule_set_goto (r, policy);
 
-	ok = xtc_append_rule (o, chain, r);
+	e = xt_rule_make_entry (r);
 	xt_rule_free (r);
+
+	if (e == NULL)
+		return 0;
+
+	ok = xtc_append_entry (o, chain, e);
+	free (e);
 
 	return ok && xtc_commit (o);
 }
