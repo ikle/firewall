@@ -306,7 +306,7 @@ static int zone_init (struct xtc *o, const char *type)
 	emit ("D: zone_init (%s)\n", type);
 
 	if ((root = conf_clone (NULL, "zone-policy", "zone", NULL)) == NULL)
-		return 0;
+		return 1;
 
 	ok = conf_iterate (root, zone_chain_cb,  &p, NULL) &&
 	     conf_iterate (root, zone_policy_cb, &p, NULL);
