@@ -14,32 +14,48 @@
 
 #include <libiptc/libiptc.h>
 
-static struct ipt_get_entries *ipt_get_entries (const char *table)
+static struct ipt_getinfo *ipt_getinfo (const char *table)
 {
 	int s;
-	struct ipt_getinfo info;
+	struct ipt_getinfo *o;
+	socklen_t len = sizeof (*o);
+
+	if ((s = socket (AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0)
+		return NULL;
+
+	if ((o = malloc (len)) == NULL)
+		goto no_alloc;
+
+	strncpy (o->name, table, sizeof (o->name));
+
+	if (getsockopt (s, IPPROTO_IP, IPT_SO_GET_INFO, o, &len) < 0)
+		goto no_info;
+
+	close (s);
+	return o;
+no_info:
+	free (o);
+no_alloc:
+	close (s);
+	return NULL;
+}
+
+static struct ipt_get_entries *ipt_get_entries (const char *table, size_t size)
+{
+	int s;
 	socklen_t len;
 	struct ipt_get_entries *entries;
 
 	if ((s = socket (AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0)
 		return NULL;
 
-	len = sizeof (info);
-	strcpy (info.name, table);
-
-	if (getsockopt (s, IPPROTO_IP, IPT_SO_GET_INFO, &info, &len) < 0)
-		goto no_info;
-
-	printf ("valid hooks = %08x, entries count = %u, size = %u\n\n",
-		 info.valid_hooks, info.num_entries, info.size);
-
-	len = sizeof (*entries) + info.size;
+	len = sizeof (*entries) + size;
 
 	if ((entries = malloc (len)) == NULL)
 		goto no_alloc;
 
 	strcpy (entries->name, table);
-	entries->size = info.size;
+	entries->size = size;
 
 	if (getsockopt (s, IPPROTO_IP, IPT_SO_GET_ENTRIES, entries, &len) < 0)
 		goto no_entries;
@@ -49,9 +65,14 @@ static struct ipt_get_entries *ipt_get_entries (const char *table)
 no_entries:
 	free (entries);
 no_alloc:
-no_info:
 	close (s);
 	return NULL;
+}
+
+static void dump_info (const struct ipt_getinfo *o)
+{
+	printf ("valid hooks = %08x, entries count = %u, size = %u\n\n",
+	        o->valid_hooks, o->num_entries, o->size);
 }
 
 static int
@@ -218,11 +239,20 @@ static int dump_image (const struct ipt_get_entries *entries, const char *image)
 int main (int argc, char *argv[])
 {
 	char *table = argc > 1 ? argv[1] : "filter";
+	struct ipt_getinfo *info;
 	struct ipt_get_entries *entries;
 	int ok;
 
-	if ((entries = ipt_get_entries (table)) == NULL) {
+	if ((info = ipt_getinfo (table)) == NULL) {
 		perror ("iptc-dump");
+		return 1;
+	}
+
+	dump_info (info);
+
+	if ((entries = ipt_get_entries (table, info->size)) == NULL) {
+		perror ("iptc-dump");
+		free (info);
 		return 1;
 	}
 
@@ -233,5 +263,6 @@ int main (int argc, char *argv[])
 		ok = dump_image (entries, argv[2]);
 
 	free (entries);
+	free (info);
 	return ok ? 0 : 1;
 }
