@@ -14,6 +14,10 @@
 
 #include <libiptc/libiptc.h>
 
+#ifndef ARRAY_SIZE
+#define ARRAY_SIZE(a)  (sizeof (a) / sizeof ((a)[0]))
+#endif
+
 static struct ipt_getinfo *ipt_getinfo (const char *table)
 {
 	int s;
@@ -71,8 +75,17 @@ no_alloc:
 
 static void dump_info (const struct ipt_getinfo *o)
 {
-	printf ("valid hooks = %08x, entries count = %u, size = %u\n\n",
-	        o->valid_hooks, o->num_entries, o->size);
+	int i;
+
+	printf ("entries count = %u, total size = %u\n\n",
+		o->num_entries, o->size);
+
+	for (i = 0; i < ARRAY_SIZE (o->hook_entry); ++i)
+		if ((o->valid_hooks & (1u << i)) != 0)
+			printf ("hook %d: %4u, %4u\n", i,
+				o->hook_entry[i], o->underflow[i]);
+
+	printf ("\n");
 }
 
 static int
