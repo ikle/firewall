@@ -13,23 +13,6 @@
 
 #include <pcap/pcap.h>
 
-static int get_type (const char *name)
-{
-	if (strcmp (name, "ip") == 0)
-		return DLT_IPV4;
-
-	if (strcmp (name, "ip6") == 0)
-		return DLT_IPV6;
-
-	if (strcmp (name, "raw") == 0)
-		return DLT_RAW;
-
-	if (strcmp (name, "ether") == 0)
-		return DLT_EN10MB;
-
-	return -1;
-}
-
 int main (int argc, char *argv[])
 {
 	pcap_t *pcap;
@@ -44,7 +27,7 @@ int main (int argc, char *argv[])
 	if (argc != 3)
 		goto usage;
 
-	if ((type = get_type (argv[1])) < 0) {
+	if ((type = pcap_datalink_name_to_val (argv[1])) == -1) {
 		fprintf (stderr, "E: unupported type %s\n", argv[1]);
 		return 1;
 	}
@@ -74,13 +57,14 @@ int main (int argc, char *argv[])
 	pcap_close (pcap);
 	return 0;
 usage:
-	fprintf (stderr, "usage:\n"
-			 "\tbpfc [-l limit] <proto> <program>\n"
-			 "proto:\n"
-			 "\tip\tIPv4\n"
-			 "\tip6\tIPv6\n"
-			 "\traw\tIPv4 or IPv6\n"
-			 "\tether\tEthernet\n");
+	fprintf (stderr, "usage:\n\n"
+			 "\tbpfc [-l limit] <link-type> <program>\n\n"
+			 "link-type:\n\n"
+			 "\tIPV4\tIPv4\n"
+			 "\tIPV6\tIPv6\n"
+			 "\tRAW\tIPv4 or IPv6\n"
+			 "\tEN10MB\tEthernet\n"
+			 "\t...\n");
 	return 1;
 overflow:
 	pcap_freecode (&p);
