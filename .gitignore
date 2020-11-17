@@ -6,4 +6,5 @@
 *.patch
 *-test
 
+bpfc
 zone-compile
