@@ -203,11 +203,12 @@ int conf_iteratev (struct conf *o, conf_cb *cb, void *cookie, va_list ap)
 	int ok = 1;
 
 	if ((c = conf_clonev (o, ap)) == NULL)
-		return 0;
+		return ok;
 
-	while (conf_get (c, entry, sizeof (entry)))
+	while (conf_get (c, entry, sizeof (entry))) {
 		if (!(ok = cb (o, entry, cookie)))
 			break;
+	}
 
 	conf_free (c);
 	return ok;
