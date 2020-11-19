@@ -225,12 +225,12 @@ static int set_iface (const char *iface, char *name, unsigned char *mask)
 		}
 
 		name[i] = *iface;
-		mask[i] = 1;
+		mask[i] = 0xff;
 		plus = *iface == '+';
 	}
 
 	if (!plus && i < size)
-		mask[i] = 1;
+		mask[i] = 0xff;
 
 	return 1;
 }
