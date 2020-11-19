@@ -65,6 +65,38 @@ struct policy_ctx {
 	int linked;		/* untyped links exists */
 };
 
+static int accept_local (struct policy_ctx *o, int in)
+{
+	struct xt_rule *r;
+	int ok;
+
+	emit ("D: accept_local (%s, %s)\n", o->zone, in ? "in" : "out");
+
+	if ((r = xt_rule_alloc (o->h)) == NULL)
+		return 0;
+
+	if (in)
+		xt_rule_set_in (r, "lo");
+	else
+		xt_rule_set_out (r, "lo");
+
+	xt_rule_set_jump (r, "RETURN");
+	ok = xtc_append_rule (o->h, o->chain, r);
+
+	xt_rule_free (r);
+	return ok;
+}
+
+static int accept_local_in (struct policy_ctx *o)
+{
+	return accept_local (o, 1);
+}
+
+static int accept_local_out (struct policy_ctx *o)
+{
+	return accept_local (o, 0);
+}
+
 static int append_default (struct conf *root, struct  policy_ctx *o)
 {
 	char action[CHAIN_SIZE + 1];
@@ -223,17 +255,20 @@ static int connect_local_in (struct conf *root, struct policy_ctx *o)
 	struct xt_rule *r;
 	int ok;
 
+	o->chain = local_in;
+
 	emit ("D: connect_local_in (%s)\n", o->zone);
 
 	if (o->linked)
 		return 1;  /* untyped links exists already */
 
-	if (!get_zone_chain (o->zone, target) ||
+	if (!accept_local_in (o) ||
+	    !get_zone_chain (o->zone, target) ||
 	    (r = xt_rule_alloc (o->h)) == NULL)
 		return 0;
 
 	xt_rule_set_goto (r, target);
-	ok = xtc_append_rule (o->h, local_in, r);
+	ok = xtc_append_rule (o->h, o->chain, r);
 
 	xt_rule_free (r);
 	return ok;
@@ -246,6 +281,7 @@ static int connect_local_out (struct conf *root, struct policy_ctx *o)
 	emit ("D: connect_local_out (%s)\n", o->zone);
 
 	return	conf_iterate (root, out_policy_cb, o, o->zone, "from", NULL) &&
+		accept_local_out (o) &&
 		append_default (root, o);
 }
 
