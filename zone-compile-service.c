@@ -1,7 +1,7 @@
 /*
  * Zone-based Firewall
  *
- * Copyright (c) 2020 Alexei A. Smekalkine <ikle@ikle.ru>
+ * Copyright (c) 2020-2022 Alexei A. Smekalkine <ikle@ikle.ru>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
@@ -221,6 +221,19 @@ static int create_zone_chain (struct conf *root, struct policy_ctx *o)
 	if (!xtc_create_chain (o->h, chain))
 		return 0;
 
+	/*
+	 * Accept zone internal traffic
+	 */
+	if ((o->rule = xt_rule_alloc (o->h)) == NULL)
+		return 0;
+
+	xt_rule_set_jump (o->rule, "RETURN");
+	conf_iterate (root, in_rule_cb, o, o->zone, "interface", NULL);
+	xt_rule_free (o->rule);
+
+	/*
+	 * Process policies from other zones
+	 */
 	return	conf_iterate (root, in_policy_cb, o, o->zone, "from", NULL) &&
 		append_default (root, o);
 }
