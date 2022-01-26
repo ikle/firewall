@@ -53,6 +53,7 @@ static const char *trans_action (const char *action)
 {
 	return	strcmp (action, "drop")   == 0 ? "DROP"   :
 		strcmp (action, "reject") == 0 ? "REJECT" :
+		strcmp (action, "accept") == 0 ? "RETURN" :
 		action;
 }
 
