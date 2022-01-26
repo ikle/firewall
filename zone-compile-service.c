@@ -110,8 +110,14 @@ static int append_default (struct conf *root, struct  policy_ctx *o)
 		return 1;  /* not a firewall table */
 
 	if (!conf_fetch (root, action, sizeof (action),
-			 o->zone, "default-action", NULL))
-		return 1;  /* default: return to main automata */
+			 o->zone, "default-action", NULL)) {
+		if (o->chain == local_out ||
+		    conf_exists (root, o->zone, "local-zone", NULL))
+			return 1;  /* local default: return to main automata */
+
+		/* non-local zone default */
+		strncpy (action, "drop", sizeof (action));
+	}
 
 	if ((r = xt_rule_alloc (o->h)) == NULL)
 		return 0;
