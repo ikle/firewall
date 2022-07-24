@@ -47,12 +47,19 @@ static inline int ipset_set_ip (struct ipset_session *s, struct in_addr *addr)
 	return ipset_session_data_set (s, IPSET_OPT_IP, addr) == 0;
 }
 
+static inline int ipset_set_timeout (struct ipset_session *s, int timeout)
+{
+	return timeout < 0 || ipset_set_u32 (s, IPSET_OPT_TIMEOUT, timeout);
+}
+
 static inline int
-ipset_create (struct ipset_session *s, const char *name, const char *type)
+ipset_create (struct ipset_session *s, const char *name, const char *type,
+	      int timeout)
 {
 	return	ipset_set_target (s, name, type) &&
 		ipset_set_u32 (s, IPSET_OPT_HASHSIZE, 1) &&
 		ipset_set_u32 (s, IPSET_OPT_MAXELEM, UINT32_MAX) &&
+		ipset_set_timeout (s, timeout) &&
 		ipset_cmd (s, IPSET_CMD_CREATE, 0) == 0;
 }
 
@@ -65,29 +72,32 @@ ipset_destroy (struct ipset_session *s, const char *name, const char *type)
 
 static inline int
 ipset_add_mac (struct ipset_session *s, const char *name, const char *type,
-	       const char *mac)
+	       const char *mac, int timeout)
 {
 	return	ipset_set_target (s, name, type) &&
 		ipset_set_mac (s, mac) &&
+		ipset_set_timeout (s, timeout) &&
 		ipset_cmd (s, IPSET_CMD_ADD, 0) == 0;
 }
 
 static inline int
 ipset_add_node (struct ipset_session *s, const char *name, const char *type,
-		struct in_addr *addr)
+		struct in_addr *addr, int timeout)
 {
 	return	ipset_set_target (s, name, type) &&
 		ipset_set_ip (s, addr) &&
+		ipset_set_timeout (s, timeout) &&
 		ipset_cmd (s, IPSET_CMD_ADD, 0) == 0;
 }
 
 static inline int
 ipset_add_net (struct ipset_session *s, const char *name, const char *type,
-	       struct in_addr *addr, unsigned mask)
+	       struct in_addr *addr, unsigned mask, int timeout)
 {
 	return	ipset_set_target (s, name, type) &&
 		ipset_set_ip (s, addr) &&
 		ipset_set_u8 (s, IPSET_OPT_CIDR, mask) &&
+		ipset_set_timeout (s, timeout) &&
 		ipset_cmd (s, IPSET_CMD_ADD, 0) == 0;
 }
 
