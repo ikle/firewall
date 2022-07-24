@@ -14,7 +14,7 @@ static int cb (int level, char *data, size_t len, void *cookie)
 {
 	FILE *to = cookie;
 
-	fprintf (to, "%d: %.*s\n", level, (int) len, data);
+	fprintf (to, "%d: %s\n", level, data);
 
 	return 1;
 }

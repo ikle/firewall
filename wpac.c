@@ -104,9 +104,10 @@ ssize_t wpac_recv (struct wpac *o, void *data, size_t len, int timeout)
 
 static int wpac_emit (struct wpac *o, size_t len)
 {
+	const size_t room = sizeof (o->buf) - 1;
 	int level;
 
-	if (o->cb == NULL || len < 3)
+	if (o->cb == NULL || len < 3 || len > room)
 		return 1;
 
 	if (o->buf[0] != '<' || !isdigit (o->buf[1]) || o->buf[2] != '>')
@@ -114,19 +115,21 @@ static int wpac_emit (struct wpac *o, size_t len)
 
 	level = o->buf[1] - '0';
 
+	o->buf[len] = '\0';
 	return o->cb (level, o->buf + 3, len - 3, o->cookie);
 }
 
 int wpac_wait (struct wpac *o, const void *data, size_t len, int timeout)
 {
+	const size_t room = sizeof (o->buf) - 1;
 	ssize_t n;
 
-	if (len > sizeof (o->buf)) {
+	if (len > room) {
 		errno = EINVAL;
 		return 0;
 	}
 
-	while ((n = wpac_recv (o, o->buf, sizeof (o->buf), timeout)) > 0) {
+	while ((n = wpac_recv (o, o->buf, room, timeout)) > 0) {
 		if (o->buf[0] != '<')
 			return n >= len && memcmp (o->buf, data, len) == 0;
 
@@ -165,13 +168,14 @@ int wpac_detach (struct wpac *o)
 
 int wpac_monitor (struct wpac *o)
 {
+	const size_t room = sizeof (o->buf) - 1;
 	ssize_t n;
 
 	if (!o->track && !wpac_attach (o))
 		return 0;
 
 	do {
-		while ((n = wpac_recv (o, o->buf, sizeof (o->buf), 3000)) > 0)
+		while ((n = wpac_recv (o, o->buf, room, 3000)) > 0)
 			if (!wpac_emit (o, n))
 				break;
 
