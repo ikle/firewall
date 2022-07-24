@@ -37,7 +37,7 @@ ipset_set_u32 (struct ipset_session *s, enum ipset_opt type, uint32_t value)
 	return ipset_session_data_set (s, type, &value) == 0;
 }
 
-static inline int ipset_set_mac (struct ipset_session *s, const char *mac)
+static inline int ipset_set_mac (struct ipset_session *s, const void *mac)
 {
 	return ipset_session_data_set (s, IPSET_OPT_ETHER, mac) == 0;
 }
@@ -72,7 +72,7 @@ ipset_destroy (struct ipset_session *s, const char *name, const char *type)
 
 static inline int
 ipset_add_mac (struct ipset_session *s, const char *name, const char *type,
-	       const char *mac, int timeout)
+	       const void *mac, int timeout)
 {
 	return	ipset_set_target (s, name, type) &&
 		ipset_set_mac (s, mac) &&
