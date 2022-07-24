@@ -1,7 +1,7 @@
 /*
  * IpSet Helpers
  *
- * Copyright (c) 2017 Alexei A. Smekalkine <ikle@ikle.ru>
+ * Copyright (c) 2017-2022 Alexei A. Smekalkine <ikle@ikle.ru>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
@@ -37,6 +37,11 @@ ipset_set_u32 (struct ipset_session *s, enum ipset_opt type, uint32_t value)
 	return ipset_session_data_set (s, type, &value) == 0;
 }
 
+static inline int ipset_set_mac (struct ipset_session *s, const char *mac)
+{
+	return ipset_session_data_set (s, IPSET_OPT_ETHER, mac) == 0;
+}
+
 static inline int ipset_set_ip (struct ipset_session *s, struct in_addr *addr)
 {
 	return ipset_session_data_set (s, IPSET_OPT_IP, addr) == 0;
@@ -56,6 +61,15 @@ ipset_destroy (struct ipset_session *s, const char *name, const char *type)
 {
 	return	ipset_set_target (s, name, type) &&
 		ipset_cmd (s, IPSET_CMD_DESTROY, 0) == 0;
+}
+
+static inline int
+ipset_add_mac (struct ipset_session *s, const char *name, const char *type,
+	       const char *mac)
+{
+	return	ipset_set_target (s, name, type) &&
+		ipset_set_mac (s, mac) &&
+		ipset_cmd (s, IPSET_CMD_ADD, 0) == 0;
 }
 
 static inline int
