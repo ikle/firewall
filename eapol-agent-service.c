@@ -10,6 +10,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <unistd.h>
+
 #include "chain-hash.h"
 #include "ipset.h"
 #include "wpac.h"
@@ -127,13 +129,14 @@ int main (int argc, char *argv[])
 	else
 		snprintf (path, sizeof (path), "%s/%s", home, argv[1]);
 
-	if ((o = wpac_alloc (path, eapol_cb, &c)) == NULL) {
-		fprintf (stderr, "E: Cannot allocate WPA Control context\n");
-		return 1;
+	for (;;) {
+		if ((o = wpac_alloc (path, eapol_cb, &c)) != NULL) {
+			wpac_monitor (o);
+			wpac_free (o);
+		}
+
+		sleep (1);
 	}
 
-	wpac_monitor (o);
-
-	wpac_free (o);
 	return 0;
 }
