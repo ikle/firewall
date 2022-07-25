@@ -70,7 +70,7 @@ static int parse_mac (const char *data, void *mac)
 {
 	unsigned char *p = mac;
 
-	if (sscanf (data, "%hhu:%hhu:%hhu:%hhu:%hhu:%hhu",
+	if (sscanf (data, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
 		    p, p + 1, p + 2, p + 3, p + 4, p + 5) == 6)
 		return 1;
 
