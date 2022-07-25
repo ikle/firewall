@@ -14,8 +14,20 @@
 #include <unistd.h>
 
 #include "chain-hash.h"
+#include "conf.h"
 #include "ipset.h"
 #include "wpac.h"
+
+static int get_reauth (const char *policy, int def)
+{
+	char v[32];
+
+	if (!conf_fetch (NULL, v, sizeof (v),
+			 "service", "eapol", policy, "reauth", NULL))
+		return def;
+
+	return atoi (v);
+}
 
 #ifndef IPSET_V7
 static void
@@ -43,8 +55,7 @@ struct eapol_set {
 	int timeout;
 };
 
-static int
-eapol_set_init (struct eapol_set *o, const char *policy, const char *timeout)
+static int eapol_set_init (struct eapol_set *o, const char *policy)
 {
 	if (!get_chain_hash ("eapol", policy, NULL, o->name))
 		return 0;
@@ -52,7 +63,7 @@ eapol_set_init (struct eapol_set *o, const char *policy, const char *timeout)
 	o->policy = policy;
 	o->name[27] = '\0';
 	o->type = "hash:mac";
-	o->timeout = atoi (timeout);
+	o->timeout = 120 + 5;
 
 	if ((o->s = ipset_session_init (ipset_out IPSET_OUT_ARG)) == NULL)
 		return 0;
@@ -117,10 +128,10 @@ int main (int argc, char *argv[])
 	char path[128];
 	struct wpac *o;
 
-	if (argc != 4) {
+	if (argc != 3) {
 		fprintf (stderr,
 			 "usage:\n"
-			 "\teapol-agent iface policy timeout\n");
+			 "\teapol-agent iface policy\n");
 		return 1;
 	}
 
@@ -128,7 +139,7 @@ int main (int argc, char *argv[])
 	ipset_load_types ();
 	openlog ("eapol-agent", 0, LOG_AUTH);
 
-	if (!eapol_set_init (&c, argv[2], argv[3])) {
+	if (!eapol_set_init (&c, argv[2])) {
 		fprintf (stderr, "E: Cannot init EAPoL set\n");
 		return 1;
 	}
@@ -137,6 +148,8 @@ int main (int argc, char *argv[])
 
 	for (;;) {
 		if ((o = wpac_alloc (path, eapol_cb, &c)) != NULL) {
+			c.timeout = get_reauth (c.policy, 120) + 5;
+
 			syslog (LOG_INFO, "Monitor events for %s policy",
 				c.policy);
 			wpac_monitor (o);
