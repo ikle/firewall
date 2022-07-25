@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <syslog.h>
 #include <unistd.h>
 
 #include "chain-hash.h"
@@ -36,6 +37,7 @@ int ipset_out (struct ipset_session *session, void *p, const char *fmt, ...)
 
 struct eapol_set {
 	struct ipset_session *s;
+	const char *policy;
 	char name[28];
 	const char *type;
 	int timeout;
@@ -47,6 +49,7 @@ eapol_set_init (struct eapol_set *o, const char *policy, const char *timeout)
 	if (!get_chain_hash ("eapol", policy, NULL, o->name))
 		return 0;
 
+	o->policy = policy;
 	o->name[27] = '\0';
 	o->type = "hash:mac";
 	o->timeout = atoi (timeout);
@@ -60,9 +63,11 @@ eapol_set_init (struct eapol_set *o, const char *policy, const char *timeout)
 	    ipset_commit (o->s) != 0)
 		goto no_create;
 
+	syslog (LOG_INFO, "Created %s policy set", policy);
 	return 1;
 no_create:
 	ipset_session_fini (o->s);
+	syslog (LOG_ERR, "Cannot create %s policy set", policy);
 	return 0;
 }
 
@@ -81,7 +86,8 @@ static int eapol_cb (int level, char *data, size_t len, void *cookie)
 {
 	struct eapol_set *o = cookie;
 	const char *ev = data;
-	char *p, mac[6];
+	char *p;
+	unsigned char mac[6];
 
 	if (level != WPAC_INFO || (p = memchr (data, ' ', len)) == NULL)
 		return 1;
@@ -91,11 +97,14 @@ static int eapol_cb (int level, char *data, size_t len, void *cookie)
 	if (strcmp (ev, "AP-STA-CONNECTED")        == 0 ||
 	    strcmp (ev, "CTRL-EVENT-EAP-SUCCESS")  == 0 ||
 	    strcmp (ev, "CTRL-EVENT-EAP-SUCCESS2") == 0) {
-		if (parse_mac (p, mac)) {
-			ipset_add_mac (o->s, o->name, o->type, mac, o->timeout);
-			ipset_commit (o->s);
-		}
-
+		if (parse_mac (p, mac) &&
+		    ipset_add_mac (o->s, o->name, o->type, mac, o->timeout) &&
+		    ipset_commit (o->s) == 0)
+			syslog (LOG_NOTICE,
+				"Authorized %02x:%02x:%02x:%02x:%02x:%02x "
+				"for %s policy",
+				mac[0], mac[1], mac[2], mac[3], mac[4], mac[5],
+				o->policy);
 		return 1;
 	}
 
@@ -118,6 +127,7 @@ int main (int argc, char *argv[])
 
 	chain_hash_init ();
 	ipset_load_types ();
+	openlog ("eapol-agent", 0, LOG_AUTH);
 
 	if (!eapol_set_init (&c, argv[2], argv[3])) {
 		fprintf (stderr, "E: Cannot init EAPoL set\n");
@@ -131,6 +141,8 @@ int main (int argc, char *argv[])
 
 	for (;;) {
 		if ((o = wpac_alloc (path, eapol_cb, &c)) != NULL) {
+			syslog (LOG_INFO, "Monitor events for %s policy",
+				c.policy);
 			wpac_monitor (o);
 			wpac_free (o);
 		}
