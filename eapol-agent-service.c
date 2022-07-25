@@ -146,7 +146,7 @@ int main (int argc, char *argv[])
 
 	snprintf (path, sizeof (path), "/var/run/hostapd/%s", argv[1]);
 
-	for (;;) {
+	for (;; sleep (1))
 		if ((o = wpac_alloc (path, eapol_cb, &c)) != NULL) {
 			c.timeout = get_reauth (c.policy, 120) + 5;
 
@@ -155,9 +155,6 @@ int main (int argc, char *argv[])
 			wpac_monitor (o);
 			wpac_free (o);
 		}
-
-		sleep (1);
-	}
 
 	return 0;
 }
