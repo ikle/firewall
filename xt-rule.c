@@ -8,8 +8,12 @@
 
 #include <errno.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include <sys/socket.h>
+#include <unistd.h>
 
 #include "xt-rule.h"
 
@@ -279,5 +283,49 @@ int xt_rule_comment (struct xt_rule *o, const char *comment)
 		return 0;
 
 	strcpy ((void *) m->m.data, comment);
+	return xt_rule_match (o, m);
+}
+
+#include <linux/netfilter/xt_set.h>
+
+static int ipset_get_index (const char *name)
+{
+	struct ip_set_req_get_set req;
+	socklen_t size = sizeof (req);
+	int s, ret;
+
+	if ((s = socket (AF_INET, SOCK_RAW, IPPROTO_RAW)) == -1)
+		return -1;
+
+	req.version = IPSET_PROTOCOL;
+	req.op      = IP_SET_OP_GET_BYNAME;
+
+	snprintf (req.set.name, sizeof (req.set.name), "%s", name);
+
+	ret = getsockopt (s, SOL_IP, SO_IP_SET, &req, &size);
+	close (s);
+
+	return ret != 0 ? -1 : req.set.index;
+}
+
+int xt_rule_match_set (struct xt_rule *o, const char *name, int dim, int flags)
+{
+	int index;
+	struct xt_set_info s;
+	struct match *m;
+
+	if ((index = ipset_get_index (name)) < 0)
+		return 0;
+
+	s.index = index;
+	s.dim   = dim;
+	s.flags = flags;
+
+	if ((m = match_alloc ("set", sizeof (s))) == NULL)
+		return 0;
+
+	m->m.u.user.revision = 1;
+
+	memcpy (m->m.data, &s, sizeof (s));
 	return xt_rule_match (o, m);
 }

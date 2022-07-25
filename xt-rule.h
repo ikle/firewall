@@ -25,5 +25,6 @@ int xt_rule_set_in  (struct xt_rule *o, const char *iface);
 int xt_rule_set_out (struct xt_rule *o, const char *iface);
 
 int xt_rule_comment (struct xt_rule *o, const char *comment);
+int xt_rule_match_set (struct xt_rule *o, const char *name, int dim, int flags);
 
 #endif  /* NET_XT_RULE_H */
