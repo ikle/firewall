@@ -113,7 +113,6 @@ static int eapol_cb (int level, char *data, size_t len, void *cookie)
 
 int main (int argc, char *argv[])
 {
-	const char *home = "/var/run/hostapd";
 	struct eapol_set c;
 	char path[128];
 	struct wpac *o;
@@ -121,7 +120,7 @@ int main (int argc, char *argv[])
 	if (argc != 4) {
 		fprintf (stderr,
 			 "usage:\n"
-			 "\teapol-agent iface|wpa-ctrl policy timeout\n");
+			 "\teapol-agent iface policy timeout\n");
 		return 1;
 	}
 
@@ -134,10 +133,7 @@ int main (int argc, char *argv[])
 		return 1;
 	}
 
-	if (argv[1][0] == '/')
-		snprintf (path, sizeof (path), "%s", argv[1]);
-	else
-		snprintf (path, sizeof (path), "%s/%s", home, argv[1]);
+	snprintf (path, sizeof (path), "/var/run/hostapd/%s", argv[1]);
 
 	for (;;) {
 		if ((o = wpac_alloc (path, eapol_cb, &c)) != NULL) {
