@@ -56,10 +56,10 @@ eapol_set_init (struct eapol_set *o, const char *policy, const char *timeout)
 
 	ipset_envopt_set (o->s, IPSET_ENV_EXIST);
 
-	if (!ipset_create (o->s, o->name, o->type, o->timeout))
+	if (!ipset_create (o->s, o->name, o->type, o->timeout) ||
+	    ipset_commit (o->s) != 0)
 		goto no_create;
 
-	ipset_commit (o->s);
 	return 1;
 no_create:
 	ipset_session_fini (o->s);
