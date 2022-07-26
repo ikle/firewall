@@ -29,6 +29,13 @@ static int get_reauth (const char *policy, int def)
 	return atoi (v);
 }
 
+static int get_policy (const char *iface, char *data, size_t len)
+{
+	return conf_fetch (NULL, data, len,
+			   "interfaces", "ethernet", iface, "authenticator",
+			   NULL);
+}
+
 #ifndef IPSET_V7
 static void
 ipset_envopt_set(struct ipset_session *s, enum ipset_envopt opt)
@@ -49,18 +56,18 @@ int ipset_out (struct ipset_session *session, void *p, const char *fmt, ...)
 
 struct eapol_set {
 	struct ipset_session *s;
-	const char *policy;
+	char policy[64];
 	char name[28];
 	const char *type;
 	int timeout;
 };
 
-static int eapol_set_init (struct eapol_set *o, const char *policy)
+static int eapol_set_init (struct eapol_set *o, const char *iface)
 {
-	if (!get_chain_hash ("eapol", policy, NULL, o->name))
+	if (!get_policy (iface, o->policy, sizeof (o->policy)) ||
+	    !get_chain_hash ("eapol", o->policy, NULL, o->name))
 		return 0;
 
-	o->policy = policy;
 	o->name[27] = '\0';
 	o->type = "hash:mac";
 	o->timeout = 120 + 5;
@@ -74,11 +81,11 @@ static int eapol_set_init (struct eapol_set *o, const char *policy)
 	    ipset_commit (o->s) != 0)
 		goto no_create;
 
-	syslog (LOG_INFO, "Created %s policy set", policy);
+	syslog (LOG_INFO, "Created %s policy set", o->policy);
 	return 1;
 no_create:
 	ipset_session_fini (o->s);
-	syslog (LOG_ERR, "Cannot create %s policy set", policy);
+	syslog (LOG_ERR, "Cannot create %s policy set", o->policy);
 	return 0;
 }
 
@@ -128,10 +135,8 @@ int main (int argc, char *argv[])
 	char path[128];
 	struct wpac *o;
 
-	if (argc != 3) {
-		fprintf (stderr,
-			 "usage:\n"
-			 "\teapol-agent iface policy\n");
+	if (argc != 2) {
+		fprintf (stderr, "usage:\n\teapol-agent iface\n");
 		return 1;
 	}
 
@@ -139,7 +144,7 @@ int main (int argc, char *argv[])
 	ipset_load_types ();
 	openlog ("eapol-agent", 0, LOG_AUTH);
 
-	if (!eapol_set_init (&c, argv[2])) {
+	if (!eapol_set_init (&c, argv[1])) {
 		fprintf (stderr, "E: Cannot init EAPoL set\n");
 		return 1;
 	}
