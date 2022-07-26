@@ -6,12 +6,14 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include <sys/stat.h>
 
+#include <signal.h>
 #include <syslog.h>
 #include <unistd.h>
 
@@ -133,14 +135,16 @@ static int eapol_cb (int level, char *data, size_t len, void *cookie)
 	return 1;
 }
 
-static void run_agent (const char *iface)
+static int agent_start (const char *iface)
 {
 	char path[128];
 	struct eapol_set c;
 	struct wpac *o;
 
-	if (daemon (0, 0) == -1)
-		return;
+	if (daemon (0, 0) == -1) {
+		syslog (LOG_ERR, "Cannot start agent for %s", iface);
+		return 1;
+	}
 
 	pidfile_write (iface);
 	snprintf (path, sizeof (path), "/var/run/hostapd/%s", iface);
@@ -158,23 +162,51 @@ static void run_agent (const char *iface)
 
 		eapol_set_fini (&c);
 	}
+
+	return 0;
+}
+
+static int agent_stop (const char *iface)
+{
+	const char *root = "/var/run/eapol-agent";
+	char path[128];
+	FILE *f;
+	int n, pid;
+
+	snprintf (path, sizeof (path), "%s/%s.pid", root, iface);
+
+	if ((f = fopen (path, "r")) == NULL)
+		return 0;
+
+	unlink (path);
+	n = fscanf (f, "%d", &pid);
+	fclose (f);
+
+	if (n == 1 && kill (pid, SIGTERM) == 0) {
+		syslog (LOG_ERR, "Stop agent for %s", iface);
+		return 0;
+	}
+
+	return (n == 1 && errno == ESRCH) ? 0 : 1;
 }
 
 int main (int argc, char *argv[])
 {
-	const char *iface = argv[1];
+	const char *iface = argv[2];
 
-	if (argc != 2)
+	if (argc != 3)
 		goto usage;
 
 	chain_hash_init ();
 	ipset_load_types ();
 	openlog ("eapol-agent", 0, LOG_AUTH);
 
-	run_agent (iface);
-	syslog (LOG_ERR, "Cannot start agent for %s", iface);
-	return 1;
+	if (strcmp (argv[1], "start") == 0)
+		return agent_start (iface);
+
+	if (strcmp (argv[1], "stop") == 0)
+		return agent_stop (iface);
 usage:
-	fprintf (stderr, "usage:\n\teapol-agent iface\n");
+	fprintf (stderr, "usage:\n\teapol-agent (start|stop) iface\n");
 	return 1;
 }
