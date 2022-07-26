@@ -10,6 +10,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <sys/stat.h>
+
 #include <syslog.h>
 #include <unistd.h>
 
@@ -74,6 +76,23 @@ static void eapol_set_fini (struct eapol_set *o)
 	ipset_session_fini (o->s);
 }
 
+static int pidfile_write (const char *iface)
+{
+	const char *root = "/var/run/eapol-agent";
+	char path[128];
+	FILE *f;
+	int n;
+
+	mkdir (root, 0777);
+	snprintf (path, sizeof (path), "%s/%s.pid", root, iface);
+
+	if ((f = fopen (path, "w")) == NULL)
+		return 0;
+
+	n = fprintf (f, "%d", getpid ());
+	return fclose (f) == 0 && n > 0;
+}
+
 static int parse_mac (const char *data, void *mac)
 {
 	unsigned char *p = mac;
@@ -120,6 +139,10 @@ static void run_agent (const char *iface)
 	struct eapol_set c;
 	struct wpac *o;
 
+	if (daemon (0, 0) == -1)
+		return;
+
+	pidfile_write (iface);
 	snprintf (path, sizeof (path), "/var/run/hostapd/%s", iface);
 
 	for (;; sleep (1)) {
@@ -150,5 +173,6 @@ int main (int argc, char *argv[])
 	openlog ("eapol-agent", 0, LOG_AUTH);
 
 	run_agent (argv[1]);
-	return 0;
+	syslog (LOG_ERR, "Cannot start agent for %s", argv[1]);
+	return 1;
 }
