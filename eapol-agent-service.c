@@ -114,25 +114,16 @@ static int eapol_cb (int level, char *data, size_t len, void *cookie)
 	return 1;
 }
 
-int main (int argc, char *argv[])
+static void run_agent (const char *iface)
 {
-	struct eapol_set c;
 	char path[128];
+	struct eapol_set c;
 	struct wpac *o;
 
-	if (argc != 2) {
-		fprintf (stderr, "usage:\n\teapol-agent iface\n");
-		return 1;
-	}
-
-	chain_hash_init ();
-	ipset_load_types ();
-	openlog ("eapol-agent", 0, LOG_AUTH);
-
-	snprintf (path, sizeof (path), "/var/run/hostapd/%s", argv[1]);
+	snprintf (path, sizeof (path), "/var/run/hostapd/%s", iface);
 
 	for (;; sleep (1)) {
-		if (!eapol_set_init (&c, argv[1]))
+		if (!eapol_set_init (&c, iface))
 			continue;
 
 		if ((o = wpac_alloc (path, eapol_cb, &c)) != NULL) {
@@ -144,6 +135,20 @@ int main (int argc, char *argv[])
 
 		eapol_set_fini (&c);
 	}
+}
 
+int main (int argc, char *argv[])
+{
+
+	if (argc != 2) {
+		fprintf (stderr, "usage:\n\teapol-agent iface\n");
+		return 1;
+	}
+
+	chain_hash_init ();
+	ipset_load_types ();
+	openlog ("eapol-agent", 0, LOG_AUTH);
+
+	run_agent (argv[1]);
 	return 0;
 }
