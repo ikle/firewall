@@ -162,17 +162,19 @@ static void run_agent (const char *iface)
 
 int main (int argc, char *argv[])
 {
+	const char *iface = argv[1];
 
-	if (argc != 2) {
-		fprintf (stderr, "usage:\n\teapol-agent iface\n");
-		return 1;
-	}
+	if (argc != 2)
+		goto usage;
 
 	chain_hash_init ();
 	ipset_load_types ();
 	openlog ("eapol-agent", 0, LOG_AUTH);
 
-	run_agent (argv[1]);
-	syslog (LOG_ERR, "Cannot start agent for %s", argv[1]);
+	run_agent (iface);
+	syslog (LOG_ERR, "Cannot start agent for %s", iface);
+	return 1;
+usage:
+	fprintf (stderr, "usage:\n\teapol-agent iface\n");
 	return 1;
 }
