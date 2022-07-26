@@ -89,6 +89,11 @@ no_create:
 	return 0;
 }
 
+static void eapol_set_fini (struct eapol_set *o)
+{
+	ipset_session_fini (o->s);
+}
+
 static int parse_mac (const char *data, void *mac)
 {
 	unsigned char *p = mac;
@@ -144,14 +149,12 @@ int main (int argc, char *argv[])
 	ipset_load_types ();
 	openlog ("eapol-agent", 0, LOG_AUTH);
 
-	if (!eapol_set_init (&c, argv[1])) {
-		fprintf (stderr, "E: Cannot init EAPoL set\n");
-		return 1;
-	}
-
 	snprintf (path, sizeof (path), "/var/run/hostapd/%s", argv[1]);
 
-	for (;; sleep (1))
+	for (;; sleep (1)) {
+		if (!eapol_set_init (&c, argv[1]))
+			continue;
+
 		if ((o = wpac_alloc (path, eapol_cb, &c)) != NULL) {
 			c.timeout = get_reauth (c.policy, 120) + 5;
 
@@ -160,6 +163,9 @@ int main (int argc, char *argv[])
 			wpac_monitor (o);
 			wpac_free (o);
 		}
+
+		eapol_set_fini (&c);
+	}
 
 	return 0;
 }
