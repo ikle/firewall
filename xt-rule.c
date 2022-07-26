@@ -305,7 +305,10 @@ static int ipset_get_index (const char *name)
 	ret = getsockopt (s, SOL_IP, SO_IP_SET, &req, &size);
 	close (s);
 
-	return ret != 0 ? -1 : req.set.index;
+	if (ret != 0 || req.set.index == IPSET_INVALID_ID)
+		return -1;
+
+	return req.set.index;
 }
 
 int xt_rule_match_set (struct xt_rule *o, const char *name, int dim, int flags)
