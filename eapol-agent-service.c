@@ -36,24 +36,6 @@ static int get_policy (const char *iface, char *data, size_t len)
 			   NULL);
 }
 
-#ifndef IPSET_V7
-static void
-ipset_envopt_set(struct ipset_session *s, enum ipset_envopt opt)
-{
-	ipset_envopt_parse (s, opt, NULL);
-}
-
-#define IPSET_OUT_ARG
-static int ipset_out (const char *fmt, ...)
-#else
-#define IPSET_OUT_ARG  , NULL
-static
-int ipset_out (struct ipset_session *session, void *p, const char *fmt, ...)
-#endif
-{
-	return 0;
-}
-
 struct eapol_set {
 	struct ipset_session *s;
 	char policy[64];
@@ -72,10 +54,8 @@ static int eapol_set_init (struct eapol_set *o, const char *iface)
 	o->type = "hash:mac";
 	o->timeout = 120 + 5;
 
-	if ((o->s = ipset_session_init (ipset_out IPSET_OUT_ARG)) == NULL)
+	if ((o->s = ipset_session_init_silent (1)) == NULL)
 		return 0;
-
-	ipset_envopt_set (o->s, IPSET_ENV_EXIST);
 
 	if (!ipset_create (o->s, o->name, o->type, 120) ||
 	    ipset_commit (o->s) != 0)

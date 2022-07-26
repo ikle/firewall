@@ -16,6 +16,8 @@
 #include <libipset/session.h>
 #include <libipset/parse.h>
 
+struct ipset_session *ipset_session_init_silent (int exists);
+
 static inline int
 ipset_set_target (struct ipset_session *s, const char *name, const char *type)
 {
