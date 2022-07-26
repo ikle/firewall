@@ -52,7 +52,7 @@ static int eapol_set_init (struct eapol_set *o, const char *iface)
 
 	o->name[27] = '\0';
 	o->type = "hash:mac";
-	o->timeout = 120 + 5;
+	o->timeout = get_reauth (o->policy, 120) + 5;
 
 	if ((o->s = ipset_session_init_silent (1)) == NULL)
 		return 0;
@@ -136,8 +136,6 @@ int main (int argc, char *argv[])
 			continue;
 
 		if ((o = wpac_alloc (path, eapol_cb, &c)) != NULL) {
-			c.timeout = get_reauth (c.policy, 120) + 5;
-
 			syslog (LOG_INFO, "Monitor events for %s policy",
 				c.policy);
 			wpac_monitor (o);
