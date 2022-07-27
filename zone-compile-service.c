@@ -482,6 +482,8 @@ int main (int argc, char *argv[])
 		return 1;
 	}
 
+	chain_hash_init ();
+
 	ok = zone_enter (&s) && zone_compile (&s) && zone_leave (&s);
 	return ok ? 0: 1;
 }
