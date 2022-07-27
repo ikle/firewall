@@ -10,6 +10,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <unistd.h>
+
 #include <libiptc/libiptc.h>
 #include <libiptc/libip6tc.h>
 
@@ -156,11 +158,21 @@ int xtc_append_entry (struct xtc *o, const char *chain, const void *e)
 	}
 }
 
-int xtc_commit (struct xtc *o)
+static int xtc_commit_nolock (struct xtc *o)
 {
 	switch (o->domain) {
 	case XTC_INET:	return iptc_commit  (o->h);
 	case XTC_INET6:	return ip6tc_commit (o->h);
 	default:	return 0;
 	}
+}
+
+int xtc_commit (struct xtc *o)
+{
+	int ok;
+
+	while (!(ok = xtc_commit_nolock (o)) && errno == EAGAIN)
+		usleep (50000);
+
+	return ok;
 }
