@@ -441,10 +441,7 @@ int zone_compile (struct zone_state *o)
 
 static int xtc_final (struct xtc *o, const char *type)
 {
-	int ok;
-
-	while (!(ok = xtc_commit (o)) && errno == EAGAIN)
-		sleep (1);
+	int ok = xtc_commit (o);
 
 	if (!ok)
 		emit ("E: %s: %s\n", type, xtc_error (xtc_domain (o)));
