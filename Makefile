@@ -2,7 +2,7 @@ DESCRIPTION = Linux Firewall Configurator
 URL = https://github.com/ikle/firewall
 
 LIBVER	= 0
-LIBREV	= 0.4
+LIBREV	= 0.5
 
 DEPENDS	= glib-2.0 libcrypto libipset libiptc
 

@@ -7,5 +7,6 @@
 *-test
 
 eapol-agent
+eapol-compile
 pcap-bpfc
 zone-compile
