@@ -6,7 +6,6 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-#include <stdarg.h>
 #include <stdio.h>
 
 #include "chain-hash.h"
@@ -14,15 +13,6 @@
 #include "xt-rule.h"
 
 static const char *chain = "eapol-auth";
-
-static void emit (const char *fmt, ...)
-{
-	va_list ap;
-
-	va_start (ap, fmt);
-	vfprintf (stderr, fmt, ap);
-	va_end (ap);
-}
 
 /*
  * Make EAPoL policy chain
@@ -100,7 +90,7 @@ static int policy_compile (const char *type, int domain)
 no_make:
 	xtc_free (o);
 no_xtc:
-	emit ("E: %s: %s\n", type, xtc_error (domain));
+	fprintf (stderr, "E: %s: %s\n", type, xtc_error (domain));
 	return 0;
 }
 
