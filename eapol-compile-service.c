@@ -55,25 +55,10 @@ static int iface_cb (struct conf *root, char *iface, void *cookie)
 	return ok;
 }
 
-static int policy_close (struct xtc *o)
-{
-	struct xt_rule *rule;
-	int ok;
-
-	if ((rule = xt_rule_alloc (o)) == NULL)
-		return 0;
-
-	xt_rule_set_jump (rule, "RETURN");
-
-	ok = xtc_append_rule (o, chain, rule);
-
-	xt_rule_free (rule);
-	return ok;
-}
-
 static int policy_make (struct xtc *o)
 {
 	struct conf *root;
+	struct xt_rule *rule;
 	int ok;
 
 	ok = xtc_is_chain (o, chain) ?	xtc_flush_entries (o, chain) :
@@ -89,7 +74,15 @@ static int policy_make (struct xtc *o)
 			return 0;
 	}
 
-	return policy_close (o);
+	if ((rule = xt_rule_alloc (o)) == NULL)
+		return 0;
+
+	xt_rule_set_jump (rule, "RETURN");
+
+	ok = xtc_append_rule (o, chain, rule);
+
+	xt_rule_free (rule);
+	return ok;
 }
 
 /*
