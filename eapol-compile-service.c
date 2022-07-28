@@ -25,15 +25,7 @@ static void emit (const char *fmt, ...)
 }
 
 /*
- * Clean up policy
- */
-static void policy_fini (struct xtc *o)
-{
-	xtc_flush_entries (o, chain);
-}
-
-/*
- * Initialize policy
+ * Make EAPoL policy chain
  */
 static int iface_cb (struct conf *root, char *iface, void *cookie)
 {
@@ -79,12 +71,14 @@ static int policy_close (struct xtc *o)
 	return ok;
 }
 
-static int policy_init (struct xtc *o, const char *type)
+static int policy_make (struct xtc *o, const char *type)
 {
 	struct conf *root;
 	int ok;
 
-	if (!xtc_is_chain (o, chain) && !xtc_create_chain (o, chain))
+	ok = xtc_is_chain (o, chain) ?	xtc_flush_entries (o, chain) :
+					xtc_create_chain  (o, chain);
+	if (!ok)
 		return 0;
 
 	if ((root = conf_clone (NULL, "interfaces", "ethernet", NULL)) != NULL) {
@@ -120,9 +114,6 @@ static int policy_enter (struct policy_state *o)
 		goto no_filter_ipv6;
 	}
 
-	policy_fini (o->filter_ipv4);
-	policy_fini (o->filter_ipv6);
-
 	return 1;
 no_filter_ipv6:
 	xtc_free (o->filter_ipv4);
@@ -132,8 +123,8 @@ no_filter_ipv4:
 
 static int policy_compile (struct policy_state *o)
 {
-	return	policy_init (o->filter_ipv4, "firewall")	&&
-		policy_init (o->filter_ipv6, "firewall-ipv6");
+	return	policy_make (o->filter_ipv4, "IPv4") &&
+		policy_make (o->filter_ipv6, "IPv6");
 }
 
 static int xtc_final (struct xtc *o, const char *type)
@@ -151,8 +142,8 @@ static int policy_leave (struct policy_state *o)
 {
 	int ok = 0;
 
-	ok |= xtc_final (o->filter_ipv4, "firewall");
-	ok |= xtc_final (o->filter_ipv6, "firewall-ipv6");
+	ok |= xtc_final (o->filter_ipv4, "IPv4");
+	ok |= xtc_final (o->filter_ipv6, "IPv6");
 
 	return ok;
 }
