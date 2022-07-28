@@ -6,9 +6,7 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-#include <errno.h>
 #include <stdio.h>
-#include <string.h>
 
 #include <linux/netfilter/xt_comment.h>
 
@@ -18,14 +16,9 @@ int xt_rule_comment (struct xt_rule *o, const char *comment)
 {
 	struct xt_comment_info *m;
 
-	if (strlen (comment) >= sizeof (m->comment)) {
-		errno = EINVAL;
-		return 0;
-	}
-
 	if ((m = xt_rule_match (o, "comment", 0, sizeof (*m))) == NULL)
 		return 0;
 
-	strcpy (m->comment, comment);
+	snprintf (m->comment, sizeof (m->comment), comment);
 	return 1;
 }
