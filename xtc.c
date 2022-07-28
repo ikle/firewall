@@ -46,6 +46,9 @@ error:
 
 void xtc_free (struct xtc *o)
 {
+	if (o == NULL)
+		return;
+
 	switch (o->domain) {
 	case XTC_INET:	iptc_free  (o->h); break;
 	case XTC_INET6:	ip6tc_free (o->h); break;
