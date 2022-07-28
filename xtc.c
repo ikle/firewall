@@ -1,7 +1,7 @@
 /*
  * IP Tables Helpers
  *
- * Copyright (c) 2020 Alexei A. Smekalkine <ikle@ikle.ru>
+ * Copyright (c) 2020-2022 Alexei A. Smekalkine <ikle@ikle.ru>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
@@ -34,12 +34,12 @@ struct xtc *xtc_alloc (int domain, const char *table)
 	case XTC_INET6:	o->h = ip6tc_init (table); break;
 	default:
 		errno = ENOSYS;
-		break;
+		goto error;
 	}
 
 	if (o->h != NULL)
 		return o;
-
+error:
 	free (o);
 	return NULL;
 }
