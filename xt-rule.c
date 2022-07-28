@@ -82,6 +82,7 @@ struct xt_rule *xt_rule_alloc (struct xtc *xtc)
 				      o->t.target.u.user.target_size;
 		break;
 	default:
+		errno = ENOSYS;
 		goto no_domain;
 	}
 
