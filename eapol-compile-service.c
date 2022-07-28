@@ -32,7 +32,7 @@ static int iface_cb (struct conf *root, char *iface, void *cookie)
 	struct xtc *o = cookie;
 	char policy[128], name[28];
 	struct xt_rule *rule;
-	int ok = 1;
+	int ok;
 
 	if (!conf_fetch (root, policy, sizeof (policy),
 			 iface, "authenticator", NULL))
@@ -44,12 +44,10 @@ static int iface_cb (struct conf *root, char *iface, void *cookie)
 	if ((rule = xt_rule_alloc (o)) == NULL)
 		return 0;
 
-	ok &= xt_rule_set_in    (rule, iface);
+	ok  = xt_rule_set_in    (rule, iface);
 	ok &= xt_rule_match_set (rule, name, 1, 0x3);  /* !src */
 	ok &= xt_rule_set_jump  (rule, "DROP");
-
-	if (ok)
-		ok = xtc_append_rule (o, chain, rule);
+	ok &= xtc_append_rule (o, chain, rule);
 
 	xt_rule_free (rule);
 	return ok;
@@ -77,9 +75,8 @@ static int policy_make (struct xtc *o)
 	if ((rule = xt_rule_alloc (o)) == NULL)
 		return 0;
 
-	xt_rule_set_jump (rule, "RETURN");
-
-	ok = xtc_append_rule (o, chain, rule);
+	ok  = xt_rule_set_jump (rule, "RETURN");
+	ok &= xtc_append_rule (o, chain, rule);
 
 	xt_rule_free (rule);
 	return ok;
