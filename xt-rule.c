@@ -1,7 +1,7 @@
 /*
- * IP Tables Helpers
+ * Netfilter Rule Helpers
  *
- * Copyright (c) 2020 Alexei A. Smekalkine <ikle@ikle.ru>
+ * Copyright (c) 2020-2022 Alexei A. Smekalkine <ikle@ikle.ru>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
@@ -25,7 +25,7 @@ struct match {
 	struct xt_entry_match m;
 };
 
-static struct match *match_alloc (const char *name, size_t size)
+static struct match *match_alloc (const char *name, int rev, size_t size)
 {
 	struct match *o;
 	size_t total = XT_ALIGN (sizeof (o->m) + size);
@@ -40,6 +40,7 @@ static struct match *match_alloc (const char *name, size_t size)
 
 	o->m.u.user.match_size = total;
 	strcpy (o->m.u.user.name, name);
+	o->m.u.user.revision = rev;
 	return o;
 }
 
@@ -107,8 +108,13 @@ void xt_rule_free (struct xt_rule *o)
 	free (o);
 }
 
-static int xt_rule_match (struct xt_rule *o, struct match *m)
+void *xt_rule_match (struct xt_rule *o, const char *name, int rev, size_t size)
 {
+	struct match *m;
+
+	if ((m = match_alloc (name, rev, size)) == NULL)
+		return NULL;
+
 	switch (o->domain) {
 	case XTC_INET:
 		o->ipv4.target_offset += m->m.u.user.match_size;
@@ -122,7 +128,7 @@ static int xt_rule_match (struct xt_rule *o, struct match *m)
 
 	m->prev = o->m;
 	o->m = m;
-	return 1;
+	return &m->m.data;
 }
 
 static size_t match_push (char *to, struct match *m)
@@ -272,19 +278,18 @@ int xt_rule_set_out (struct xt_rule *o, const char *iface)
 
 int xt_rule_comment (struct xt_rule *o, const char *comment)
 {
-	size_t size = sizeof (struct xt_comment_info);
-	struct match *m;
+	struct xt_comment_info *m;
 
-	if (strlen (comment) >= size) {
+	if (strlen (comment) >= sizeof (m->comment)) {
 		errno = EINVAL;
 		return 0;
 	}
 
-	if ((m = match_alloc ("comment", size)) == NULL)
+	if ((m = xt_rule_match (o, "comment", 0, sizeof (*m))) == NULL)
 		return 0;
 
-	strcpy ((void *) m->m.data, comment);
-	return xt_rule_match (o, m);
+	strcpy (m->comment, comment);
+	return 1;
 }
 
 #include <linux/netfilter/xt_set.h>
@@ -315,21 +320,16 @@ static int ipset_get_index (const char *name)
 int xt_rule_match_set (struct xt_rule *o, const char *name, int dim, int flags)
 {
 	int index;
-	struct xt_set_info s;
-	struct match *m;
+	struct xt_set_info *m;
 
 	if ((index = ipset_get_index (name)) < 0)
 		return 0;
 
-	s.index = index;
-	s.dim   = dim;
-	s.flags = flags;
-
-	if ((m = match_alloc ("set", sizeof (s))) == NULL)
+	if ((m = xt_rule_match (o, "set", 1, sizeof (*m))) == NULL)
 		return 0;
 
-	m->m.u.user.revision = 1;
-
-	memcpy (m->m.data, &s, sizeof (s));
-	return xt_rule_match (o, m);
+	m->index = index;
+	m->dim   = dim;
+	m->flags = flags;
+	return 1;
 }
