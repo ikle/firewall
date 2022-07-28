@@ -455,12 +455,12 @@ static int xtc_final (struct xtc *o, const char *type)
  */
 int zone_leave (struct zone_state *o)
 {
-	int ok = 0;
+	int ok = 1;
 
-	ok |= xtc_final (o->filter_ipv4, "firewall");
-	ok |= xtc_final (o->filter_ipv6, "firewall-ipv6");
-	ok |= xtc_final (o->mangle_ipv4, "clone/modify");
-	ok |= xtc_final (o->mangle_ipv6, "clone/modify-ipv6");
+	ok &= xtc_final (o->filter_ipv4, "firewall");
+	ok &= xtc_final (o->filter_ipv6, "firewall-ipv6");
+	ok &= xtc_final (o->mangle_ipv4, "clone/modify");
+	ok &= xtc_final (o->mangle_ipv6, "clone/modify-ipv6");
 
 	return ok;
 }
