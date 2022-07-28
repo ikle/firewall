@@ -140,10 +140,10 @@ static int xtc_final (struct xtc *o, const char *type)
 
 static int policy_leave (struct policy_state *o)
 {
-	int ok = 0;
+	int ok = 1;
 
-	ok |= xtc_final (o->filter_ipv4, "IPv4");
-	ok |= xtc_final (o->filter_ipv6, "IPv6");
+	ok &= xtc_final (o->filter_ipv4, "IPv4");
+	ok &= xtc_final (o->filter_ipv6, "IPv6");
 
 	return ok;
 }
