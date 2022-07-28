@@ -71,7 +71,7 @@ static int policy_close (struct xtc *o)
 	return ok;
 }
 
-static int policy_make (struct xtc *o, const char *type)
+static int policy_make (struct xtc *o)
 {
 	struct conf *root;
 	int ok;
@@ -85,76 +85,42 @@ static int policy_make (struct xtc *o, const char *type)
 		ok = conf_iterate (root, iface_cb, o, NULL);
 		conf_free (root);
 
-		if (!ok) {
-			emit ("E: %s: %s\n", type, xtc_error (xtc_domain (o)));
+		if (!ok)
 			return 0;
-		}
 	}
 
 	return policy_close (o);
 }
 
 /*
- * Top-Level Logic State
+ * Top-Level Logic
  */
-struct policy_state {
-	struct xtc *filter_ipv4;
-	struct xtc *filter_ipv6;
-};
-
-static int policy_enter (struct policy_state *o)
+static int policy_compile (const char *type, int domain)
 {
-	if ((o->filter_ipv4 = xtc_alloc (XTC_INET,  "filter")) == NULL) {
-		emit ("E: IPv4 filter: %s\n", xtc_error (XTC_INET));
-		goto no_filter_ipv4;
-	}
+	struct xtc *o;
 
-	if ((o->filter_ipv6 = xtc_alloc (XTC_INET6, "filter")) == NULL) {
-		emit ("E: IPv6 filter: %s\n", xtc_error (XTC_INET6));
-		goto no_filter_ipv6;
-	}
+	if ((o = xtc_alloc (domain, "filter")) == NULL)
+		goto no_xtc;
 
-	return 1;
-no_filter_ipv6:
-	xtc_free (o->filter_ipv4);
-no_filter_ipv4:
-	return 0;
-}
-
-static int policy_compile (struct policy_state *o)
-{
-	return	policy_make (o->filter_ipv4, "IPv4") &&
-		policy_make (o->filter_ipv6, "IPv6");
-}
-
-static int xtc_final (struct xtc *o, const char *type)
-{
-	int ok = xtc_commit (o);
-
-	if (!ok)
-		emit ("E: %s: %s\n", type, xtc_error (xtc_domain (o)));
+	if (!policy_make (o) || !xtc_commit (o))
+		goto no_make;
 
 	xtc_free (o);
-	return ok;
-}
-
-static int policy_leave (struct policy_state *o)
-{
-	int ok = 1;
-
-	ok &= xtc_final (o->filter_ipv4, "IPv4");
-	ok &= xtc_final (o->filter_ipv6, "IPv6");
-
-	return ok;
+	return 1;
+no_make:
+	xtc_free (o);
+no_xtc:
+	emit ("E: %s: %s\n", type, xtc_error (domain));
+	return 0;
 }
 
 int main (int argc, char *argv[])
 {
-	struct policy_state s;
 	int ok;
 
 	chain_hash_init ();
 
-	ok = policy_enter (&s) && policy_compile (&s) && policy_leave (&s);
+	ok = policy_compile ("IPv4", XTC_INET) &&
+	     policy_compile ("IPv6", XTC_INET6);
 	return ok ? 0 : 1;
 }
