@@ -274,24 +274,6 @@ int xt_rule_set_out (struct xt_rule *o, const char *iface)
 	return 0;
 }
 
-#include <linux/netfilter/xt_comment.h>
-
-int xt_rule_comment (struct xt_rule *o, const char *comment)
-{
-	struct xt_comment_info *m;
-
-	if (strlen (comment) >= sizeof (m->comment)) {
-		errno = EINVAL;
-		return 0;
-	}
-
-	if ((m = xt_rule_match (o, "comment", 0, sizeof (*m))) == NULL)
-		return 0;
-
-	strcpy (m->comment, comment);
-	return 1;
-}
-
 #include <linux/netfilter/xt_set.h>
 
 static int ipset_get_index (const char *name)
