@@ -9,6 +9,8 @@
 #ifndef NET_XT_RULE_H
 #define NET_XT_RULE_H  1
 
+#include <stddef.h>
+
 #include "xtc.h"
 
 struct xt_rule *xt_rule_alloc (struct xtc *xtc);
