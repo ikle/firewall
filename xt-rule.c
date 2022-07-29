@@ -237,7 +237,10 @@ static int set_iface (const char *iface, char *name, unsigned char *mask)
 		plus = *iface == '+';
 	}
 
-	if (!plus && i < size)
+	if (plus)
+		mask[i - 1] = 0;
+	else
+	if (i < size)
 		mask[i] = 0xff;
 
 	return 1;
