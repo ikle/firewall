@@ -20,15 +20,14 @@ static const char *chain = "eapol-auth";
 static int iface_cb (struct conf *root, char *iface, void *cookie)
 {
 	struct xtc *o = cookie;
-	char policy[128], name[28];
+	char name[28];
 	struct xt_rule *rule;
 	int ok;
 
-	if (!conf_fetch (root, policy, sizeof (policy),
-			 iface, "authenticator", NULL))
+	if (!conf_exists (root, iface, "authenticator", NULL))
 		return 1;
 
-	if (!get_chain_hash ("eapol", policy, NULL, name))
+	if (!get_chain_hash ("eapol", iface, NULL, name))
 		return 0;
 
 	if ((rule = xt_rule_alloc (o)) == NULL)

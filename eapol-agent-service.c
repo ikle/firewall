@@ -42,6 +42,7 @@ static int get_policy (const char *iface, char *data, size_t len)
 
 struct eapol_set {
 	struct ipset_session *s;
+	const char *iface;
 	char policy[64];
 	char name[28];
 	const char *type;
@@ -51,9 +52,10 @@ struct eapol_set {
 static int eapol_set_init (struct eapol_set *o, const char *iface)
 {
 	if (!get_policy (iface, o->policy, sizeof (o->policy)) ||
-	    !get_chain_hash ("eapol", o->policy, NULL, o->name))
+	    !get_chain_hash ("eapol", iface, NULL, o->name))
 		return 0;
 
+	o->iface = iface;
 	o->name[27] = '\0';
 	o->type = "hash:mac";
 	o->timeout = get_reauth (o->policy, 120) + 5;
@@ -65,11 +67,11 @@ static int eapol_set_init (struct eapol_set *o, const char *iface)
 	    ipset_commit (o->s) != 0)
 		goto no_create;
 
-	syslog (LOG_INFO, "Created %s policy set", o->policy);
+	syslog (LOG_INFO, "Created %s access set", iface);
 	return 1;
 no_create:
 	ipset_session_fini (o->s);
-	syslog (LOG_ERR, "Cannot create %s policy set", o->policy);
+	syslog (LOG_ERR, "Cannot create %s access set", iface);
 	return 0;
 }
 
@@ -126,9 +128,9 @@ static int eapol_cb (int level, char *data, size_t len, void *cookie)
 		    ipset_commit (o->s) == 0)
 			syslog (LOG_NOTICE,
 				"Authorized %02x:%02x:%02x:%02x:%02x:%02x "
-				"for %s policy",
+				"for %s",
 				mac[0], mac[1], mac[2], mac[3], mac[4], mac[5],
-				o->policy);
+				o->iface);
 		return 1;
 	}
 
@@ -154,8 +156,7 @@ static int agent_start (const char *iface)
 			continue;
 
 		if ((o = wpac_alloc (path, eapol_cb, &c)) != NULL) {
-			syslog (LOG_INFO, "Monitor events for %s policy",
-				c.policy);
+			syslog (LOG_INFO, "Monitor events for %s", iface);
 			wpac_monitor (o);
 			wpac_free (o);
 		}
