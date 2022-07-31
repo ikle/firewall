@@ -45,7 +45,7 @@ static int iface_cb (struct conf *root, char *iface, void *cookie)
 	return ok;
 }
 
-static int policy_make (struct xtc *o, const char *chain)
+int xtc_eapol_compile (struct xtc *o, const char *chain)
 {
 	struct eapol_ctx c = {o, chain};
 	struct conf *root;
@@ -85,7 +85,7 @@ static int policy_compile (const char *type, int domain)
 	if ((o = xtc_alloc (domain, "filter")) == NULL)
 		goto no_xtc;
 
-	if (!policy_make (o, "eapol-auth") || !xtc_commit (o))
+	if (!xtc_eapol_compile (o, "eapol-auth") || !xtc_commit (o))
 		goto no_make;
 
 	xtc_free (o);
