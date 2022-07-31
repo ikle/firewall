@@ -61,6 +61,14 @@ int xtc_eapol_compile (struct xtc *o, const char *chain)
 			return 0;
 	}
 
+	if ((root = conf_clone (NULL, "interfaces", "bonding", NULL)) != NULL) {
+		ok = conf_iterate (root, iface_cb, &c, NULL);
+		conf_free (root);
+
+		if (!ok)
+			return 0;
+	}
+
 	if ((rule = xt_rule_alloc (o)) == NULL)
 		return 0;
 

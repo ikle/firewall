@@ -35,9 +35,10 @@ static int get_reauth (const char *policy, int def)
 
 static int get_policy (const char *iface, char *data, size_t len)
 {
-	return conf_fetch (NULL, data, len,
-			   "interfaces", "ethernet", iface, "authenticator",
-			   NULL);
+	return	conf_fetch (NULL, data, len, "interfaces", "ethernet", iface,
+			    "authenticator", NULL) ||
+		conf_fetch (NULL, data, len, "interfaces", "bonding", iface,
+			    "authenticator", NULL);
 }
 
 struct eapol_set {
