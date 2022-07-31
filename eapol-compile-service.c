@@ -18,7 +18,7 @@ static int policy_compile (const char *type, int domain)
 	if ((o = xtc_alloc (domain, "filter")) == NULL)
 		goto no_xtc;
 
-	if (!xtc_eapol_compile (o, "eapol-auth") || !xtc_commit (o))
+	if (!xtc_eapol_compile (o, "auth-eapol") || !xtc_commit (o))
 		goto no_make;
 
 	xtc_free (o);
