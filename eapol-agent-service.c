@@ -68,11 +68,9 @@ static int eapol_set_init (struct eapol_set *o, const char *iface)
 	    ipset_commit (o->s) != 0)
 		goto no_create;
 
-	syslog (LOG_INFO, "Created %s access set", iface);
 	return 1;
 no_create:
 	ipset_session_fini (o->s);
-	syslog (LOG_ERR, "Cannot create %s access set", iface);
 	return 0;
 }
 
