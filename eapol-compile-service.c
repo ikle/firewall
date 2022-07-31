@@ -12,14 +12,17 @@
 #include "conf.h"
 #include "xt-rule.h"
 
-static const char *chain = "eapol-auth";
-
 /*
  * Make EAPoL policy chain
  */
+struct eapol_ctx {
+	struct xtc *h;
+	const char *chain;
+};
+
 static int iface_cb (struct conf *root, char *iface, void *cookie)
 {
-	struct xtc *o = cookie;
+	struct eapol_ctx *o = cookie;
 	char name[28];
 	struct xt_rule *rule;
 	int ok;
@@ -30,20 +33,21 @@ static int iface_cb (struct conf *root, char *iface, void *cookie)
 	if (!get_chain_hash ("eapol", iface, NULL, name))
 		return 0;
 
-	if ((rule = xt_rule_alloc (o)) == NULL)
+	if ((rule = xt_rule_alloc (o->h)) == NULL)
 		return 0;
 
 	ok  = xt_rule_set_in    (rule, iface);
 	ok &= xt_rule_match_set (rule, name, 1, 0x3);  /* !src */
 	ok &= xt_rule_set_jump  (rule, "DROP");
-	ok &= xtc_append_rule (o, chain, rule);
+	ok &= xtc_append_rule (o->h, o->chain, rule);
 
 	xt_rule_free (rule);
 	return ok;
 }
 
-static int policy_make (struct xtc *o)
+static int policy_make (struct xtc *o, const char *chain)
 {
+	struct eapol_ctx c = {o, chain};
 	struct conf *root;
 	struct xt_rule *rule;
 	int ok;
@@ -54,7 +58,7 @@ static int policy_make (struct xtc *o)
 		return 0;
 
 	if ((root = conf_clone (NULL, "interfaces", "ethernet", NULL)) != NULL) {
-		ok = conf_iterate (root, iface_cb, o, NULL);
+		ok = conf_iterate (root, iface_cb, &c, NULL);
 		conf_free (root);
 
 		if (!ok)
@@ -81,7 +85,7 @@ static int policy_compile (const char *type, int domain)
 	if ((o = xtc_alloc (domain, "filter")) == NULL)
 		goto no_xtc;
 
-	if (!policy_make (o) || !xtc_commit (o))
+	if (!policy_make (o, "eapol-auth") || !xtc_commit (o))
 		goto no_make;
 
 	xtc_free (o);
