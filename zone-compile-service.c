@@ -98,7 +98,7 @@ static int accept_local_out (struct policy_ctx *o)
 	return accept_local (o, 0);
 }
 
-static int append_default (struct conf *root, struct  policy_ctx *o)
+static int append_default (struct conf *root, struct policy_ctx *o)
 {
 	char action[CHAIN_SIZE + 1];
 	struct xt_rule *r;
